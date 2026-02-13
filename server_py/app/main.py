@@ -237,7 +237,7 @@ def _run_compute(op: str, work_dir: Path) -> Path:
     if not he_engine.is_available():
         raise HTTPException(
             status_code=503,
-            detail="HE engine unavailable. Install PySEAL (e.g. Huelse/SEAL-Python) so the server can run homomorphic computations.",
+            detail="HE engine unavailable. Install PySEAL: pip install seal (or build from source: server_py/install_seal_python.sh). See server_py/docs/TROUBLESHOOTING.md",
         )
     result_ct = work_dir / "result.ct"
     try:
@@ -327,7 +327,8 @@ def health():
 
 @app.post("/v1/session/keys", tags=["session"], response_model=SessionOkResponse)
 def session_keys(req: SessionKeysRequest):
-    """Create session with HE params and public keys. Required before session/data or compute."""
+    """Create session with HE params and public keys. Required before session/data or compute.
+    If the session already exists, existing data (ciphertexts, employees) is preserved."""
     _validate_session_id(req.session_id)
     try:
         blob_dir = db.session_blob_dir(req.session_id)
@@ -338,18 +339,19 @@ def session_keys(req: SessionKeysRequest):
         if req.galois_keys_b64:
             (blob_dir / "galois_keys.seal").write_bytes(base64.b64decode(req.galois_keys_b64))
         now = time.time()
+        existing = db.get_session(req.session_id)
         session_doc = {
             "session_id": req.session_id,
             "blob_dir": _blob_dir_str(blob_dir),
             "params_path": str(blob_dir / "params.seal"),
             "public_key_path": str(blob_dir / "public_key.seal"),
             "relin_keys_path": str(blob_dir / "relin_keys.seal"),
-            "salary_ct_path": None,
-            "hours_ct_path": None,
-            "bonus_points_ct_path": None,
-            "count": 0,
-            "employees": {},
-            "created_at": now,
+            "salary_ct_path": existing.get("salary_ct_path") if existing else None,
+            "hours_ct_path": existing.get("hours_ct_path") if existing else None,
+            "bonus_points_ct_path": existing.get("bonus_points_ct_path") if existing else None,
+            "count": existing.get("count", 0) if existing else 0,
+            "employees": existing.get("employees", {}) if existing else {},
+            "created_at": existing.get("created_at", now) if existing else now,
             "updated_at": now,
         }
         db.upsert_session(req.session_id, session_doc)
@@ -469,7 +471,8 @@ def run_all(req: Optional[RunRequest] = Body(None)):
         hours_ct_b64 = payload["hours_ct_b64"]
         bonus_points_ct_b64 = payload["bonus_points_ct_b64"]
         count = payload["count"]
-        session_id = req.session_id or f"run-{uuid.uuid4().hex[:12]}"
+        # Reuse same session when no session_id so data (e.g. employees) is not lost on each run
+        session_id = req.session_id or "run-static"
         bonus_rate_bps = req.bonus_rate_bps
     else:
         params_b64 = req.params_b64
@@ -480,7 +483,8 @@ def run_all(req: Optional[RunRequest] = Body(None)):
         hours_ct_b64 = req.hours_ct_b64
         bonus_points_ct_b64 = req.bonus_points_ct_b64
         count = req.count if req.count is not None else 0
-        session_id = req.session_id or f"run-{uuid.uuid4().hex[:12]}"
+        # Same default as static: one session dir for all runs when session_id not provided
+        session_id = req.session_id or "run-static"
         bonus_rate_bps = req.bonus_rate_bps
 
     _validate_session_id(session_id)
@@ -492,6 +496,7 @@ def run_all(req: Optional[RunRequest] = Body(None)):
         if galois_keys_b64:
             (blob_dir / "galois_keys.seal").write_bytes(_b64decode_safe(galois_keys_b64, "galois_keys_b64"))
         now = time.time()
+        existing = db.get_session(session_id)
         session_doc = {
             "session_id": session_id,
             "blob_dir": _blob_dir_str(blob_dir),
@@ -501,9 +506,9 @@ def run_all(req: Optional[RunRequest] = Body(None)):
             "salary_ct_path": None,
             "hours_ct_path": None,
             "bonus_points_ct_path": None,
-            "count": 0,
-            "employees": {},
-            "created_at": now,
+            "count": count,
+            "employees": existing.get("employees", {}) if existing else {},
+            "created_at": existing.get("created_at", now) if existing else now,
             "updated_at": now,
         }
         db.upsert_session(session_id, session_doc)
@@ -513,7 +518,6 @@ def run_all(req: Optional[RunRequest] = Body(None)):
         session_doc["salary_ct_path"] = str(blob_dir / "salary.ct")
         session_doc["hours_ct_path"] = str(blob_dir / "hours.ct")
         session_doc["bonus_points_ct_path"] = str(blob_dir / "bonus_points.ct")
-        session_doc["count"] = count
         session_doc["updated_at"] = time.time()
         db.upsert_session(session_id, session_doc)
         job_ids = {
@@ -522,6 +526,8 @@ def run_all(req: Optional[RunRequest] = Body(None)):
             "total_hours": _enqueue_compute(session_id, "total_hours", "total_hours"),
             "bonus_pool": _enqueue_compute(session_id, "bonus_pool", "bonus_pool", bonus_rate_bps=bonus_rate_bps),
         }
+        # Auto-create per-employee entries from data/employees.json or employees.csv so GET .../employees returns them
+        _create_employees_from_batch_if_data(session_id)
         return {"session_id": session_id, "job_ids": job_ids}
     except HTTPException:
         raise
@@ -531,6 +537,81 @@ def run_all(req: Optional[RunRequest] = Body(None)):
 
 
 # ---------- CRUD: HR employees (encrypted per employee) ----------
+
+def _load_employee_ids_from_data_dir(batch_count: int | None = None) -> list[str] | None:
+    """Load ordered employee_ids from DATA_DIR/employees.json or employees.csv.
+    If batch_count is set, prefer the file whose row count equals batch_count (so IDs match the batch).
+    Return None if neither exists, empty, or no list length matches batch_count when batch_count is set."""
+    import csv as csv_module
+    json_ids: list[str] | None = None
+    csv_ids: list[str] | None = None
+    json_path = DATA_DIR / "employees.json"
+    if json_path.exists():
+        try:
+            data = json.loads(json_path.read_text())
+            if isinstance(data, list) and data:
+                json_ids = [str(r.get("employee_id", "")).strip() or str(i + 1) for i, r in enumerate(data) if isinstance(r, dict)]
+        except Exception:
+            pass
+    csv_path = DATA_DIR / "employees.csv"
+    if csv_path.exists():
+        try:
+            with open(csv_path, newline="", encoding="utf-8") as f:
+                rows = [r for r in csv_module.DictReader(f) if (r.get("employee_id") or "").strip()]
+            if rows:
+                csv_ids = [str(r["employee_id"]).strip() for r in rows]
+        except Exception:
+            pass
+    # Prefer the list that matches batch count so IDs align with ciphertext order (e.g. 1001..1020 from CSV)
+    if batch_count is not None:
+        if json_ids is not None and len(json_ids) == batch_count:
+            return json_ids
+        if csv_ids is not None and len(csv_ids) == batch_count:
+            return csv_ids
+        return None
+    return json_ids if json_ids else csv_ids
+
+
+def _create_employees_from_batch_if_data(session_id: str) -> None:
+    """If session has batch files and data/employees.json or employees.csv exists, create per-employee entries so GET .../employees returns them."""
+    s = db.get_session(session_id)
+    if not s:
+        return
+    blob_dir = _blob_dir(s)
+    for name in ["salary.ct", "hours.ct", "bonus_points.ct"]:
+        if not (blob_dir / name).exists():
+            return
+    try:
+        salary_cts = _parse_batch_ct_file(blob_dir / "salary.ct")
+        hours_cts = _parse_batch_ct_file(blob_dir / "hours.ct")
+        bonus_cts = _parse_batch_ct_file(blob_dir / "bonus_points.ct")
+    except Exception:
+        return
+    n = len(salary_cts)
+    if len(hours_cts) != n or len(bonus_cts) != n:
+        return
+    # Use the file that has the same count as the batch so IDs match (e.g. 1001..1020 from CSV)
+    ids = _load_employee_ids_from_data_dir(batch_count=n)
+    if ids is None:
+        ids = [str(i + 1) for i in range(n)]
+    s.setdefault("employees", {})
+    for i, eid in enumerate(ids):
+        eid = (eid or "").strip()
+        if not eid or not EMPLOYEE_ID_RE.match(eid):
+            eid = str(i + 1)
+        emp_dir = blob_dir / "employees" / eid
+        emp_dir.mkdir(parents=True, exist_ok=True)
+        _write_single_ct_bytes(emp_dir / "salary.ct", salary_cts[i])
+        _write_single_ct_bytes(emp_dir / "hours.ct", hours_cts[i])
+        _write_single_ct_bytes(emp_dir / "bonus_points.ct", bonus_cts[i])
+        s["employees"][eid] = {
+            "salary_ct_path": str(emp_dir / "salary.ct"),
+            "hours_ct_path": str(emp_dir / "hours.ct"),
+            "bonus_points_ct_path": str(emp_dir / "bonus_points.ct"),
+        }
+    s["updated_at"] = time.time()
+    db.upsert_session(session_id, s)
+    logger.info("Created %d employees for session %s (ids from data/employees.json or .csv matching batch count)", n, session_id)
 
 def _parse_batch_ct_file(path: Path) -> list[bytes]:
     """Parse batch format [count: u32][len: u32][ct]...; return list of raw ct bytes."""

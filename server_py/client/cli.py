@@ -188,7 +188,7 @@ def _load_employee_rows_json(path: Path) -> list[dict]:
 
 
 def cmd_encrypt_hr(args):
-    """Read employees from CSV or JSON; write out/salary.ct, hours.ct, bonus_points.ct, meta.json. Use --csv or --json."""
+    """Read employees from CSV or JSON; write out/salary.ct, hours.ct, bonus_points.ct, meta.json. Use --csv or --json. Default: data/employees.json then data/employees.csv."""
     _need_seal()
     csv_path = getattr(args, "csv", None)
     json_path = getattr(args, "json", None)
@@ -199,13 +199,28 @@ def cmd_encrypt_hr(args):
             sys.exit(1)
         rows = _load_employee_rows_json(path)
         source = "JSON"
-    else:
-        path = _resolve_data_path(csv_path or DATA_DIR / "employees.csv", "employees.csv")
+    elif csv_path is not None:
+        path = _resolve_data_path(csv_path, "employees.csv")
         if not path.exists():
             print(f"File not found: {path}", file=sys.stderr)
             sys.exit(1)
         rows = _load_employee_rows_csv(path)
         source = "CSV"
+    else:
+        # Default: prefer server_py/data/employees.json, then data/employees.csv
+        path_json = Path.cwd() / DATA_DIR / "employees.json"
+        path_csv = Path.cwd() / DATA_DIR / "employees.csv"
+        if path_json.exists():
+            path = path_json.resolve()
+            rows = _load_employee_rows_json(path)
+            source = "JSON"
+        elif path_csv.exists():
+            path = path_csv.resolve()
+            rows = _load_employee_rows_csv(path)
+            source = "CSV"
+        else:
+            print(f"Neither {path_json} nor {path_csv} found. Use --json or --csv to specify path.", file=sys.stderr)
+            sys.exit(1)
     ctx = _load_context(OUT_DIR)
     pk = _SEAL.PublicKey()
     pk.load(ctx, str(OUT_DIR / "public_key.seal"))

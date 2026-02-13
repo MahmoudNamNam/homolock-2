@@ -22,9 +22,10 @@ except ImportError as e:
 
 # Output under server_py/static/
 SCRIPT_DIR = Path(__file__).resolve().parent
+SERVER_PY_DATA = SCRIPT_DIR.parent / "data"
 STATIC_DIR = SCRIPT_DIR.parent / "static"
 
-# Fixed demo data: employee_id, salary_cents, hours, bonus_points (5 rows)
+# Fallback demo data: (employee_id, salary_cents, hours, bonus_points) when data/employees.json is missing
 STATIC_ROWS = [
     (1001, 850_000, 160, 10),
     (1002, 720_000, 160, 8),
@@ -32,6 +33,41 @@ STATIC_ROWS = [
     (1004, 680_000, 140, 6),
     (1005, 1_100_000, 160, 15),
 ]
+
+
+def load_employee_rows() -> list[tuple[int, int, int, int]]:
+    """Load (employee_id, salary_cents, hours, bonus_points) from server_py/data/employees.json, else data/employees.csv, else STATIC_ROWS."""
+    # Prefer server_py/data/employees.json
+    json_path = SERVER_PY_DATA / "employees.json"
+    if json_path.exists():
+        rows = json.loads(json_path.read_text())
+        if isinstance(rows, list):
+            out = []
+            for r in rows:
+                eid = r.get("employee_id", "")
+                try:
+                    eid = int(eid) if isinstance(eid, (int, float)) else int(str(eid).strip() or "0")
+                except (ValueError, TypeError):
+                    eid = len(out) + 1
+                out.append((eid, int(r.get("salary_cents", 0)), int(r.get("hours", 0)), int(r.get("bonus_points", 0))))
+            if out:
+                return out
+    # Fallback: server_py/data/employees.csv
+    csv_path = SERVER_PY_DATA / "employees.csv"
+    if csv_path.exists():
+        import csv as csv_module
+        out = []
+        with open(csv_path, newline="", encoding="utf-8") as f:
+            for i, row in enumerate(csv_module.DictReader(f)):
+                eid = row.get("employee_id", "").strip() or str(i + 1)
+                try:
+                    eid = int(eid)
+                except ValueError:
+                    eid = i + 1
+                out.append((eid, int(row.get("salary_cents", 0)), int(row.get("hours", 0)), int(row.get("bonus_points", 0))))
+            if out:
+                return out
+    return STATIC_ROWS
 
 
 def save_ct_vec(path: Path, ct_bytes_list: list[bytes]) -> None:
@@ -73,7 +109,11 @@ def main() -> None:
         pass
     print("Written secret_key.seal, public_key.seal, relin_keys.seal")
 
-    # 3) Encrypt fixed data
+    # 3) Encrypt employee data from server_py/data/employees.json (or .csv), else built-in demo rows
+    rows = load_employee_rows()
+    src = "employees.json" if (SERVER_PY_DATA / "employees.json").exists() else "employees.csv" if (SERVER_PY_DATA / "employees.csv").exists() else "built-in demo"
+    print(f"Using {len(rows)} rows from server_py/data/{src}")
+
     enc = seal.Encryptor(ctx, pk)
     batch = seal.BatchEncoder(ctx)
 
@@ -84,9 +124,9 @@ def main() -> None:
             ct.save(t.name)
             return Path(t.name).read_bytes()
 
-    salaries = [r[1] for r in STATIC_ROWS]
-    hours = [r[2] for r in STATIC_ROWS]
-    bonus_pts = [r[3] for r in STATIC_ROWS]
+    salaries = [r[1] for r in rows]
+    hours = [r[2] for r in rows]
+    bonus_pts = [r[3] for r in rows]
     salary_cts = [encrypt_one(v) for v in salaries]
     hours_cts = [encrypt_one(v) for v in hours]
     bonus_cts = [encrypt_one(v) for v in bonus_pts]
@@ -94,7 +134,7 @@ def main() -> None:
     save_ct_vec(STATIC_DIR / "salary.ct", salary_cts)
     save_ct_vec(STATIC_DIR / "hours.ct", hours_cts)
     save_ct_vec(STATIC_DIR / "bonus_points.ct", bonus_cts)
-    (STATIC_DIR / "meta.json").write_text(json.dumps({"count": len(STATIC_ROWS), "version": 1}))
+    (STATIC_DIR / "meta.json").write_text(json.dumps({"count": len(rows), "version": 1}))
     print("Written salary.ct, hours.ct, bonus_points.ct, meta.json")
 
     print(f"\nStatic data is in: {STATIC_DIR}")

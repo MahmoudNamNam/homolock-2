@@ -27,5 +27,7 @@ server_py/static/secret_key.seal
 build/
 tests/
 
-
+server_py/data/blobs/
+server_py/data/sessions/
+server_py/jobs/
 

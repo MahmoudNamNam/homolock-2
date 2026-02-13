@@ -252,11 +252,11 @@ This fetches each job result and decrypts with `static/secret_key.seal`, then pr
 ## File-based storage
 
 - **Config**: Set `HOMOLOCK_DATA_DIR` to the base directory (default: `./data` relative to the server cwd).
-- **Layout**:
-  - `data/db/sessions.json` — session metadata (paths, count, `employees`, timestamps).
-  - `data/db/jobs.json` — job metadata.
-  - `data/blobs/sessions/<session_id>/` — params.seal, keys, salary.ct/hours.ct/bonus_points.ct and/or `employees/<employee_id>/*.ct`.
-  - `data/blobs/jobs/<job_id>/` — HE inputs and `result.ct`.
+- **Layout** (single unified dir under `HOMOLOCK_DATA_DIR`):
+  - `data/sessions.json` — session metadata (paths, count, `employees`, timestamps).
+  - `data/jobs.json` — job metadata.
+  - `data/sessions/<session_id>/` — params.seal, keys, salary.ct/hours.ct/bonus_points.ct and/or `employees/<employee_id>/*.ct`.
+  - `data/jobs/<job_id>/` — HE inputs and `result.ct`.
 - File locking (portalocker) and atomic JSON writes for concurrency.
 
 ---
@@ -389,7 +389,7 @@ python3 -m client.cli compute --session-id my-session --server http://<EC2_PUBLI
 
 Replace `<EC2_PUBLIC_IP>` with your instance’s public IPv4. For HTTPS and a domain, put a reverse proxy (e.g. Nginx or Caddy) in front of the app and use TLS.
 
-**Using the API when deployed:** See **`server_py/docs/DEPLOY-AWS.md`** for how to call the API from Postman, CLI, or cURL once the server is running on AWS (base URL, one-shot run, static data).
+**Run the app in the cloud (any provider):** See **`server_py/docs/RUN-IN-CLOUD.md`** for VM or container steps (AWS, GCP, Azure, DigitalOcean, etc.). **Using the API when deployed:** See **`server_py/docs/DEPLOY-AWS.md`** for how to call the API from Postman, CLI, or cURL once the server is running (base URL, one-shot run, static data).
 
 ---
 

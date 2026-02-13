@@ -1,13 +1,13 @@
 #!/usr/bin/env python3
 """
-Upload session from CSV or JSON (no static data): read data/employees.csv or
-data/employees.json, encrypt with CLI, then POST session/keys, session/data,
+Upload session from CSV or JSON (no static data): read server_py/data/employees.json or
+employees.csv, encrypt with CLI, then POST session/keys, session/data,
 and employees/from-batch so List Employees returns your rows.
 
 Run from server_py:
-  python -m scripts.upload_from_csv --csv ../data/employees.csv
-  python -m scripts.upload_from_csv --json ../data/employees.json
-  python -m scripts.upload_from_csv   # uses data/employees.csv or data/employees.json if present
+  python -m scripts.upload_from_csv   # uses server_py/data/employees.json (or .csv) by default
+  python -m scripts.upload_from_csv --json data/employees.json
+  python -m scripts.upload_from_csv --csv data/employees.csv
 
 Requires: PySEAL (for CLI), requests. Server must be running.
 """
@@ -32,15 +32,16 @@ SCRIPT_DIR = Path(__file__).resolve().parent
 SERVER_PY = SCRIPT_DIR.parent
 REPO_ROOT = SERVER_PY.parent
 OUT_DIR = SERVER_PY / "out"
-DATA_DIR = REPO_ROOT / "data"
+# Prefer server_py/data so server_py/data/employees.json is the default source
+DATA_DIR = SERVER_PY / "data"
 
 
 def resolve_data_file(csv_path: str | None, json_path: str | None) -> tuple[Path, str]:
-    """Return (path, "csv"|"json"). Prefer explicit --json/--csv; else default to data/employees.json or data/employees.csv."""
+    """Return (path, "csv"|"json"). Prefer explicit --json/--csv; else default to server_py/data/employees.json or employees.csv."""
     def resolve(p: Path) -> Path:
         if p.is_absolute():
             return p
-        for base in [Path.cwd(), REPO_ROOT, DATA_DIR]:
+        for base in [Path.cwd(), DATA_DIR, REPO_ROOT]:
             cand = (base / p) if base != DATA_DIR else (base / p.name)
             if cand.exists():
                 return cand.resolve()
@@ -51,11 +52,15 @@ def resolve_data_file(csv_path: str | None, json_path: str | None) -> tuple[Path
     if csv_path is not None:
         return resolve(Path(csv_path)), "csv"
     for name, kind in [("employees.json", "json"), ("employees.csv", "csv")]:
-        for base in [DATA_DIR, REPO_ROOT, Path.cwd()]:
-            cand = (base / "data" / name) if base != DATA_DIR else (base / name)
-            if cand.exists():
-                return cand.resolve(), kind
-    return DATA_DIR / "employees.csv", "csv"
+        cand = DATA_DIR / name
+        if cand.exists():
+            return cand.resolve(), kind
+        cand = REPO_ROOT / "data" / name
+        if cand.exists():
+            return cand.resolve(), kind
+        if (Path.cwd() / "data" / name).exists():
+            return (Path.cwd() / "data" / name).resolve(), kind
+    return DATA_DIR / "employees.json", "json"
 
 
 def load_employee_ids(path: Path, kind: str) -> list[str]:
