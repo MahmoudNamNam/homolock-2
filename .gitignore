@@ -2,6 +2,8 @@
 __pycache__/
 # Client output (params, keys, ciphertexts — never commit secret_key.seal)
 out/
+# Static demo data: keep keys/ciphertexts; never commit secret key
+server_py/static/secret_key.seal
 .DS_Store
 .idea/
 .vscode/
@@ -24,4 +26,6 @@ out/
 .coverage.yml
 build/
 tests/
+
+
 

@@ -1,12 +1,14 @@
 """
 Python HE engine using PySEAL (seal package).
-Performs BFV homomorphic sum on ciphertexts in-process; no C++ worker required.
-Falls back to None if seal is not installed (server will use C++ worker).
+Performs BFV homomorphic sum on ciphertexts in-process. Python only.
+Falls back to None if seal is not installed; server then returns 503 for compute.
 """
 from __future__ import annotations
 
+import base64
 import logging
 import struct
+import tempfile
 from pathlib import Path
 from typing import Optional
 
@@ -18,6 +20,16 @@ try:
     _SEAL_AVAILABLE = True
 except ImportError:
     seal = None  # type: ignore
+
+
+def _seal_scheme_bfv():
+    """Return seal BFV scheme type (handles scheme_type.bfv or SchemeType.BFV)."""
+    if seal is None:
+        raise RuntimeError("seal not available")
+    st = getattr(seal, "scheme_type", None) or getattr(seal, "SchemeType", None)
+    if st is None:
+        raise RuntimeError("seal has no scheme_type or SchemeType")
+    return getattr(st, "bfv", None) or getattr(st, "BFV", None)
 
 
 def is_available() -> bool:
@@ -76,12 +88,20 @@ def run_sum(job_dir: Path, op: str) -> Optional[Path]:
     if not in_path.exists():
         raise FileNotFoundError(str(in_path))
 
-    params = seal.EncryptionParameters()
-    params.load(str(job_dir / "params.seal"))
+    # PySEAL: EncryptionParameters(scheme_type) then load(); some builds use different scheme_type location
+    params_path = str(job_dir / "params.seal")
+    scheme = getattr(getattr(seal, "scheme_type", None), "bfv", None) or _seal_scheme_bfv()
+    if scheme is None:
+        raise RuntimeError("seal: could not get scheme_type.bfv")
+    params = seal.EncryptionParameters(scheme)
+    params.load(params_path)
     context = seal.SEALContext(params)
-    err = context.parameter_error_message()
-    if err and err != "valid":
-        raise RuntimeError(f"Invalid parameters: {err}")
+    # Optional: validate parameters (not all seal builds expose parameter_error_message)
+    err_fn = getattr(context, "parameter_error_message", None)
+    if callable(err_fn):
+        err = err_fn()
+        if err and str(err).strip() and str(err) != "valid":
+            raise RuntimeError(f"Invalid parameters: {err}")
 
     cts = _load_ct_vector(in_path, context, job_dir)
     if not cts:
@@ -90,8 +110,78 @@ def run_sum(job_dir: Path, op: str) -> Optional[Path]:
     if len(cts) == 1:
         result = cts[0]
     else:
-        result = seal.Ciphertext()
-        evaluator.add_many(cts, result)
+        # add_many( list[Ciphertext] ) -> Ciphertext (returns result, no in-place)
+        result = evaluator.add_many(cts)
     _save_ct(result_ct, result)
     logger.info("Python HE engine wrote %s", result_ct)
     return result_ct
+
+
+def add_two_ciphertexts(blob_dir: Path, ct1_bytes: bytes, ct2_bytes: bytes) -> bytes:
+    """Homomorphically add two ciphertexts (same params from blob_dir). Returns result ciphertext as bytes."""
+    if not _SEAL_AVAILABLE or seal is None:
+        raise RuntimeError("seal not available")
+    blob_dir = Path(blob_dir)
+    params_path = str(blob_dir / "params.seal")
+    if not (blob_dir / "params.seal").exists():
+        raise FileNotFoundError("params.seal missing")
+    scheme = getattr(getattr(seal, "scheme_type", None), "bfv", None) or _seal_scheme_bfv()
+    params = seal.EncryptionParameters(scheme)
+    params.load(params_path)
+    context = seal.SEALContext(params)
+    ct1 = seal.Ciphertext()
+    ct2 = seal.Ciphertext()
+    with tempfile.NamedTemporaryFile(suffix=".ct", delete=True) as t1:
+        t1.write(ct1_bytes)
+        t1.flush()
+        ct1.load(context, t1.name)
+    with tempfile.NamedTemporaryFile(suffix=".ct", delete=True) as t2:
+        t2.write(ct2_bytes)
+        t2.flush()
+        ct2.load(context, t2.name)
+    evaluator = seal.Evaluator(context)
+    result = evaluator.add(ct1, ct2)
+    with tempfile.NamedTemporaryFile(suffix=".ct", delete=True) as out:
+        result.save(out.name)
+        return Path(out.name).read_bytes()
+
+
+def encrypt_one_plaintext(blob_dir: Path, value: int) -> bytes:
+    """Encrypt a single int with the session's public key; return ciphertext bytes. Uses BatchEncoder.encode([value])."""
+    if not _SEAL_AVAILABLE or seal is None:
+        raise RuntimeError("seal not available")
+    try:
+        import numpy as np
+    except ImportError:
+        raise RuntimeError("numpy required for encryption")
+    blob_dir = Path(blob_dir)
+    params_path = str(blob_dir / "params.seal")
+    pk_path = str(blob_dir / "public_key.seal")
+    if not (blob_dir / "params.seal").exists() or not (blob_dir / "public_key.seal").exists():
+        raise FileNotFoundError("params.seal or public_key.seal missing in session")
+    scheme = getattr(getattr(seal, "scheme_type", None), "bfv", None) or _seal_scheme_bfv()
+    params = seal.EncryptionParameters(scheme)
+    params.load(params_path)
+    context = seal.SEALContext(params)
+    public_key = seal.PublicKey()
+    public_key.load(context, pk_path)
+    batch = seal.BatchEncoder(context)
+    enc = seal.Encryptor(context, public_key)
+    pt = batch.encode(np.array([value], dtype=np.int64))
+    ct = enc.encrypt(pt)
+    with tempfile.NamedTemporaryFile(suffix=".ct", delete=True) as t:
+        ct.save(t.name)
+        return Path(t.name).read_bytes()
+
+
+def encrypt_employee_body(blob_dir: Path, employee_id: str, salary_cents: int, hours: int, bonus_points: int) -> dict:
+    """Return JSON-serializable body for POST .../employees: employee_id and three *_ct_b64 fields."""
+    s = encrypt_one_plaintext(blob_dir, salary_cents)
+    h = encrypt_one_plaintext(blob_dir, hours)
+    b = encrypt_one_plaintext(blob_dir, bonus_points)
+    return {
+        "employee_id": employee_id,
+        "salary_ct_b64": base64.b64encode(s).decode("ascii"),
+        "hours_ct_b64": base64.b64encode(h).decode("ascii"),
+        "bonus_points_ct_b64": base64.b64encode(b).decode("ascii"),
+    }

@@ -1,125 +1,467 @@
 {
-  "98442805-7ac9-4c3a-98a4-6684a63de92c": {
-    "job_id": "98442805-7ac9-4c3a-98a4-6684a63de92c",
-    "session_id": "demo-1770972268",
-    "status": "done",
-    "result_path": "/Users/nmnm/Coding/Homolock/server_py/data/blobs/jobs/98442805-7ac9-4c3a-98a4-6684a63de92c/result.ct",
+  "b148991a-ed67-4f77-96dd-e77f853d6250": {
+    "job_id": "b148991a-ed67-4f77-96dd-e77f853d6250",
+    "session_id": "run-1770990110",
+    "status": "error",
+    "error": "500: HE computation failed: __init__(): incompatible constructor arguments. The following argument types are supported:\n    1. seal.EncryptionParameters(arg0: seal.scheme_type)\n    2. seal.EncryptionParameters(arg0: seal.EncryptionParameters)\n\nInvoked with: ",
     "result_type": "total_payroll",
-    "count": 20,
-    "created_at": 1770972270.0383072,
-    "finished_at": 1770972270.483954
+    "created_at": 1770990111.4214249,
+    "finished_at": 1770990111.422953
   },
-  "0693ec90-9607-4b3b-b64a-dfb23e625e50": {
-    "job_id": "0693ec90-9607-4b3b-b64a-dfb23e625e50",
-    "session_id": "demo-1770972268",
+  "ab549d6e-0093-42c2-ae92-0fec8b3554be": {
+    "job_id": "ab549d6e-0093-42c2-ae92-0fec8b3554be",
+    "session_id": "run-1770990131",
+    "status": "error",
+    "error": "500: HE computation failed: __init__(): incompatible constructor arguments. The following argument types are supported:\n    1. seal.EncryptionParameters(arg0: seal.scheme_type)\n    2. seal.EncryptionParameters(arg0: seal.EncryptionParameters)\n\nInvoked with: ",
+    "result_type": "total_payroll",
+    "created_at": 1770990132.384212,
+    "finished_at": 1770990132.3982651
+  },
+  "f215f580-6904-4663-8295-b6f3f2685b28": {
+    "job_id": "f215f580-6904-4663-8295-b6f3f2685b28",
+    "session_id": "run-1770990290",
+    "status": "error",
+    "error": "500: HE computation failed: 'seal.SEALContext' object has no attribute 'parameter_error_message'",
+    "result_type": "total_payroll",
+    "created_at": 1770990291.654452,
+    "finished_at": 1770990291.663766
+  },
+  "00ecc106-dbb6-4e3b-b9ab-5f342eca8e5f": {
+    "job_id": "00ecc106-dbb6-4e3b-b9ab-5f342eca8e5f",
+    "session_id": "run-1770990475",
+    "status": "error",
+    "error": "500: HE computation failed: 'seal.SEALContext' object has no attribute 'parameter_error_message'",
+    "result_type": "total_payroll",
+    "created_at": 1770990476.5312362,
+    "finished_at": 1770990476.540704
+  },
+  "e587e915-04cc-45e2-b973-e835f9a9fafc": {
+    "job_id": "e587e915-04cc-45e2-b973-e835f9a9fafc",
+    "session_id": "run-1770990491",
+    "status": "error",
+    "error": "500: HE computation failed: add_many(): incompatible function arguments. The following argument types are supported:\n    1. (self: seal.Evaluator, arg0: list[seal.Ciphertext]) -> seal.Ciphertext\n\nInvoked with: <seal.Evaluator object at 0x106c67070>, [<seal.Ciphertext object at 0x106c78330>, <seal.Ciphertext object at 0x106c83770>, <seal.Ciphertext object at 0x106c784b0>, <seal.Ciphertext object at 0x106c787f0>, <seal.Ciphertext object at 0x106c65b30>, <seal.Ciphertext object at 0x106c64930>, <seal.Ciphertext object at 0x106c652b0>, <seal.Ciphertext object at 0x106c67370>, <seal.Ciphertext object at 0x106c66f70>, <seal.Ciphertext object at 0x106c645b0>, <seal.Ciphertext object at 0x106c66830>, <seal.Ciphertext object at 0x106c64170>, <seal.Ciphertext object at 0x106c67cb0>, <seal.Ciphertext object at 0x106c67c30>, <seal.Ciphertext object at 0x106c671b0>, <seal.Ciphertext object at 0x106c652f0>, <seal.Ciphertext object at 0x106c673f0>, <seal.Ciphertext object at 0x106c67d30>, <seal.Ciphertext object at 0x106c668f0>, <seal.Ciphertext object at 0x106c65ef0>], <seal.Ciphertext object at 0x106c644f0>",
+    "result_type": "total_payroll",
+    "created_at": 1770990492.636388,
+    "finished_at": 1770990492.6574452
+  },
+  "6fbaa5ca-8420-4d10-a58f-b0c780bc9a69": {
+    "job_id": "6fbaa5ca-8420-4d10-a58f-b0c780bc9a69",
+    "session_id": "run-82ea3c3ffa5c",
     "status": "done",
-    "result_path": "/Users/nmnm/Coding/Homolock/server_py/data/blobs/jobs/0693ec90-9607-4b3b-b64a-dfb23e625e50/result.ct",
+    "result_path": "blobs/jobs/6fbaa5ca-8420-4d10-a58f-b0c780bc9a69/result.ct",
+    "result_type": "total_payroll",
+    "count": 5,
+    "created_at": 1770992355.488445,
+    "finished_at": 1770992355.4992661
+  },
+  "d3984785-883a-47bc-8766-fc18762f2c3d": {
+    "job_id": "d3984785-883a-47bc-8766-fc18762f2c3d",
+    "session_id": "run-82ea3c3ffa5c",
+    "status": "done",
+    "result_path": "blobs/jobs/d3984785-883a-47bc-8766-fc18762f2c3d/result.ct",
     "result_type": "avg_salary",
-    "count": 20,
-    "created_at": 1770972270.4890938,
-    "finished_at": 1770972270.51871
+    "count": 5,
+    "created_at": 1770992355.502986,
+    "finished_at": 1770992355.5276978
   },
-  "51d73257-8bcd-4224-bb94-8f6836667b41": {
-    "job_id": "51d73257-8bcd-4224-bb94-8f6836667b41",
-    "session_id": "demo-1770972268",
+  "95d97b88-2bcf-43bb-9ee3-3066c5e66b31": {
+    "job_id": "95d97b88-2bcf-43bb-9ee3-3066c5e66b31",
+    "session_id": "run-82ea3c3ffa5c",
     "status": "done",
-    "result_path": "/Users/nmnm/Coding/Homolock/server_py/data/blobs/jobs/51d73257-8bcd-4224-bb94-8f6836667b41/result.ct",
+    "result_path": "blobs/jobs/95d97b88-2bcf-43bb-9ee3-3066c5e66b31/result.ct",
     "result_type": "total_hours",
-    "count": 20,
-    "created_at": 1770972270.523902,
-    "finished_at": 1770972270.5494258
+    "count": 5,
+    "created_at": 1770992355.531467,
+    "finished_at": 1770992355.541037
   },
-  "232c6720-d438-48c6-870c-69fc43579899": {
-    "job_id": "232c6720-d438-48c6-870c-69fc43579899",
-    "session_id": "demo-1770972268",
+  "f45c5621-dd14-43c6-bf87-e728a4839953": {
+    "job_id": "f45c5621-dd14-43c6-bf87-e728a4839953",
+    "session_id": "run-82ea3c3ffa5c",
     "status": "done",
-    "result_path": "/Users/nmnm/Coding/Homolock/server_py/data/blobs/jobs/232c6720-d438-48c6-870c-69fc43579899/result.ct",
+    "result_path": "blobs/jobs/f45c5621-dd14-43c6-bf87-e728a4839953/result.ct",
     "result_type": "bonus_pool",
-    "count": 20,
-    "created_at": 1770972270.5545301,
-    "finished_at": 1770972270.5794592,
+    "count": 5,
+    "created_at": 1770992355.544814,
+    "finished_at": 1770992355.554184,
     "bonus_rate_bps": 1000
   },
-  "503107df-82d4-4347-b069-e012a70e1e54": {
-    "job_id": "503107df-82d4-4347-b069-e012a70e1e54",
-    "session_id": "demo-1770972310",
+  "6d2ff29f-72a6-418d-b98a-859468ea7f7c": {
+    "job_id": "6d2ff29f-72a6-418d-b98a-859468ea7f7c",
+    "session_id": "run-03af69954d96",
     "status": "done",
-    "result_path": "/Users/nmnm/Coding/Homolock/server_py/data/blobs/jobs/503107df-82d4-4347-b069-e012a70e1e54/result.ct",
+    "result_path": "blobs/jobs/6d2ff29f-72a6-418d-b98a-859468ea7f7c/result.ct",
     "result_type": "total_payroll",
-    "count": 20,
-    "created_at": 1770972311.703527,
-    "finished_at": 1770972311.7301528
+    "count": 5,
+    "created_at": 1770992438.405767,
+    "finished_at": 1770992438.418808
   },
-  "75368187-7671-4270-b250-3249c343893a": {
-    "job_id": "75368187-7671-4270-b250-3249c343893a",
-    "session_id": "demo-1770972310",
+  "27abe75d-8da7-44cb-96fb-17346da1d82d": {
+    "job_id": "27abe75d-8da7-44cb-96fb-17346da1d82d",
+    "session_id": "run-03af69954d96",
     "status": "done",
-    "result_path": "/Users/nmnm/Coding/Homolock/server_py/data/blobs/jobs/75368187-7671-4270-b250-3249c343893a/result.ct",
+    "result_path": "blobs/jobs/27abe75d-8da7-44cb-96fb-17346da1d82d/result.ct",
     "result_type": "avg_salary",
-    "count": 20,
-    "created_at": 1770972311.736619,
-    "finished_at": 1770972311.762081
+    "count": 5,
+    "created_at": 1770992438.423944,
+    "finished_at": 1770992438.4377222
   },
-  "d074bcfd-180a-4686-82b6-3542281da574": {
-    "job_id": "d074bcfd-180a-4686-82b6-3542281da574",
-    "session_id": "demo-1770972310",
+  "3e5ff109-f2f1-439c-8e86-0e947cb34ef9": {
+    "job_id": "3e5ff109-f2f1-439c-8e86-0e947cb34ef9",
+    "session_id": "run-03af69954d96",
     "status": "done",
-    "result_path": "/Users/nmnm/Coding/Homolock/server_py/data/blobs/jobs/d074bcfd-180a-4686-82b6-3542281da574/result.ct",
+    "result_path": "blobs/jobs/3e5ff109-f2f1-439c-8e86-0e947cb34ef9/result.ct",
     "result_type": "total_hours",
-    "count": 20,
-    "created_at": 1770972311.768785,
-    "finished_at": 1770972311.794039
+    "count": 5,
+    "created_at": 1770992438.443774,
+    "finished_at": 1770992438.456089
   },
-  "bf988a32-cfcf-41b8-af48-77dc55e7063b": {
-    "job_id": "bf988a32-cfcf-41b8-af48-77dc55e7063b",
-    "session_id": "demo-1770972310",
+  "59f5ecb6-f359-4fba-beea-ed65b9526236": {
+    "job_id": "59f5ecb6-f359-4fba-beea-ed65b9526236",
+    "session_id": "run-03af69954d96",
     "status": "done",
-    "result_path": "/Users/nmnm/Coding/Homolock/server_py/data/blobs/jobs/bf988a32-cfcf-41b8-af48-77dc55e7063b/result.ct",
+    "result_path": "blobs/jobs/59f5ecb6-f359-4fba-beea-ed65b9526236/result.ct",
     "result_type": "bonus_pool",
-    "count": 20,
-    "created_at": 1770972311.800679,
-    "finished_at": 1770972311.827277,
+    "count": 5,
+    "created_at": 1770992438.460929,
+    "finished_at": 1770992438.473228,
     "bonus_rate_bps": 1000
   },
-  "493665db-ffce-4174-a85f-e30e000198dd": {
-    "job_id": "493665db-ffce-4174-a85f-e30e000198dd",
-    "session_id": "demo-1770972614",
+  "4ef3f261-2ed9-4328-aab3-9baba221e6b9": {
+    "job_id": "4ef3f261-2ed9-4328-aab3-9baba221e6b9",
+    "session_id": "run-cc8d6f8c5973",
     "status": "done",
-    "result_path": "/Users/nmnm/Coding/Homolock/server_py/data/blobs/jobs/493665db-ffce-4174-a85f-e30e000198dd/result.ct",
+    "result_path": "blobs/jobs/4ef3f261-2ed9-4328-aab3-9baba221e6b9/result.ct",
     "result_type": "total_payroll",
-    "count": 20,
-    "created_at": 1770972616.072885,
-    "finished_at": 1770972616.477579
+    "count": 5,
+    "created_at": 1770992661.1195688,
+    "finished_at": 1770992661.133423
   },
-  "d088a2a2-b286-4d19-a994-c3f8142b8c58": {
-    "job_id": "d088a2a2-b286-4d19-a994-c3f8142b8c58",
-    "session_id": "demo-1770972614",
+  "141c954d-6cdf-4a7e-9522-7ffc639b2865": {
+    "job_id": "141c954d-6cdf-4a7e-9522-7ffc639b2865",
+    "session_id": "run-cc8d6f8c5973",
     "status": "done",
-    "result_path": "/Users/nmnm/Coding/Homolock/server_py/data/blobs/jobs/d088a2a2-b286-4d19-a994-c3f8142b8c58/result.ct",
+    "result_path": "blobs/jobs/141c954d-6cdf-4a7e-9522-7ffc639b2865/result.ct",
     "result_type": "avg_salary",
-    "count": 20,
-    "created_at": 1770972616.4830568,
-    "finished_at": 1770972616.5131872
+    "count": 5,
+    "created_at": 1770992661.137731,
+    "finished_at": 1770992661.1520908
   },
-  "3dd5a286-b2ce-444f-b4ad-2814aa8effd7": {
-    "job_id": "3dd5a286-b2ce-444f-b4ad-2814aa8effd7",
-    "session_id": "demo-1770972614",
+  "555a66d7-b1cf-4914-aeea-8d5ae2db9e82": {
+    "job_id": "555a66d7-b1cf-4914-aeea-8d5ae2db9e82",
+    "session_id": "run-cc8d6f8c5973",
     "status": "done",
-    "result_path": "/Users/nmnm/Coding/Homolock/server_py/data/blobs/jobs/3dd5a286-b2ce-444f-b4ad-2814aa8effd7/result.ct",
+    "result_path": "blobs/jobs/555a66d7-b1cf-4914-aeea-8d5ae2db9e82/result.ct",
     "result_type": "total_hours",
-    "count": 20,
-    "created_at": 1770972616.5181692,
-    "finished_at": 1770972616.544849
+    "count": 5,
+    "created_at": 1770992661.156967,
+    "finished_at": 1770992661.1683981
   },
-  "d993dcac-425f-4ee2-ba43-6e33144b9b64": {
-    "job_id": "d993dcac-425f-4ee2-ba43-6e33144b9b64",
-    "session_id": "demo-1770972614",
+  "9483442d-a707-4323-9afe-b0bd765fdace": {
+    "job_id": "9483442d-a707-4323-9afe-b0bd765fdace",
+    "session_id": "run-cc8d6f8c5973",
     "status": "done",
-    "result_path": "/Users/nmnm/Coding/Homolock/server_py/data/blobs/jobs/d993dcac-425f-4ee2-ba43-6e33144b9b64/result.ct",
+    "result_path": "blobs/jobs/9483442d-a707-4323-9afe-b0bd765fdace/result.ct",
     "result_type": "bonus_pool",
-    "count": 20,
-    "created_at": 1770972616.549273,
-    "finished_at": 1770972616.575399,
+    "count": 5,
+    "created_at": 1770992661.172042,
+    "finished_at": 1770992661.182391,
     "bonus_rate_bps": 1000
+  },
+  "65932bf1-6368-492a-ad61-6615328f2413": {
+    "job_id": "65932bf1-6368-492a-ad61-6615328f2413",
+    "session_id": "run-8d6f421584a2",
+    "status": "done",
+    "result_path": "blobs/jobs/65932bf1-6368-492a-ad61-6615328f2413/result.ct",
+    "result_type": "total_payroll",
+    "count": 5,
+    "created_at": 1770992713.469792,
+    "finished_at": 1770992713.482867
+  },
+  "1ec2468c-101e-40cb-9410-18fe692c10d4": {
+    "job_id": "1ec2468c-101e-40cb-9410-18fe692c10d4",
+    "session_id": "run-8d6f421584a2",
+    "status": "done",
+    "result_path": "blobs/jobs/1ec2468c-101e-40cb-9410-18fe692c10d4/result.ct",
+    "result_type": "avg_salary",
+    "count": 5,
+    "created_at": 1770992713.4871192,
+    "finished_at": 1770992713.504936
+  },
+  "0dc1e744-e395-447a-8630-f1864c812b1d": {
+    "job_id": "0dc1e744-e395-447a-8630-f1864c812b1d",
+    "session_id": "run-8d6f421584a2",
+    "status": "done",
+    "result_path": "blobs/jobs/0dc1e744-e395-447a-8630-f1864c812b1d/result.ct",
+    "result_type": "total_hours",
+    "count": 5,
+    "created_at": 1770992713.5081248,
+    "finished_at": 1770992713.519274
+  },
+  "c1fbc968-2e10-47c5-8c9f-ea4c8f961009": {
+    "job_id": "c1fbc968-2e10-47c5-8c9f-ea4c8f961009",
+    "session_id": "run-8d6f421584a2",
+    "status": "done",
+    "result_path": "blobs/jobs/c1fbc968-2e10-47c5-8c9f-ea4c8f961009/result.ct",
+    "result_type": "bonus_pool",
+    "count": 5,
+    "created_at": 1770992713.523347,
+    "finished_at": 1770992713.534305,
+    "bonus_rate_bps": 1000
+  },
+  "4c3d4009-f618-4144-a595-11ea248877e0": {
+    "job_id": "4c3d4009-f618-4144-a595-11ea248877e0",
+    "session_id": "run-6ca9fe1fd8b1",
+    "status": "done",
+    "result_path": "blobs/jobs/4c3d4009-f618-4144-a595-11ea248877e0/result.ct",
+    "result_type": "total_payroll",
+    "count": 5,
+    "created_at": 1770992810.818495,
+    "finished_at": 1770992810.842196
+  },
+  "c5e046de-7085-4a89-a9a6-ae4fa032a544": {
+    "job_id": "c5e046de-7085-4a89-a9a6-ae4fa032a544",
+    "session_id": "run-6ca9fe1fd8b1",
+    "status": "done",
+    "result_path": "blobs/jobs/c5e046de-7085-4a89-a9a6-ae4fa032a544/result.ct",
+    "result_type": "avg_salary",
+    "count": 5,
+    "created_at": 1770992810.848885,
+    "finished_at": 1770992810.861912
+  },
+  "ca5897c0-3b1a-495a-9dfc-40adc522b62a": {
+    "job_id": "ca5897c0-3b1a-495a-9dfc-40adc522b62a",
+    "session_id": "run-6ca9fe1fd8b1",
+    "status": "done",
+    "result_path": "blobs/jobs/ca5897c0-3b1a-495a-9dfc-40adc522b62a/result.ct",
+    "result_type": "total_hours",
+    "count": 5,
+    "created_at": 1770992810.871645,
+    "finished_at": 1770992810.883265
+  },
+  "16b391ab-e485-4093-bac3-13933f99239d": {
+    "job_id": "16b391ab-e485-4093-bac3-13933f99239d",
+    "session_id": "run-6ca9fe1fd8b1",
+    "status": "done",
+    "result_path": "blobs/jobs/16b391ab-e485-4093-bac3-13933f99239d/result.ct",
+    "result_type": "bonus_pool",
+    "count": 5,
+    "created_at": 1770992810.889162,
+    "finished_at": 1770992810.899873,
+    "bonus_rate_bps": 1000
+  },
+  "d3decf35-23ba-477f-8294-e028a3c27379": {
+    "job_id": "d3decf35-23ba-477f-8294-e028a3c27379",
+    "session_id": "run-d7c370733626",
+    "status": "done",
+    "result_path": "blobs/jobs/d3decf35-23ba-477f-8294-e028a3c27379/result.ct",
+    "result_type": "total_payroll",
+    "count": 5,
+    "created_at": 1770993198.3529658,
+    "finished_at": 1770993198.3678432
+  },
+  "59ca65ad-fd91-494e-b9f7-9a6714a52259": {
+    "job_id": "59ca65ad-fd91-494e-b9f7-9a6714a52259",
+    "session_id": "run-d7c370733626",
+    "status": "done",
+    "result_path": "blobs/jobs/59ca65ad-fd91-494e-b9f7-9a6714a52259/result.ct",
+    "result_type": "avg_salary",
+    "count": 5,
+    "created_at": 1770993198.373327,
+    "finished_at": 1770993198.3907928
+  },
+  "9647d19f-1652-464d-8b2c-e1fd13744de6": {
+    "job_id": "9647d19f-1652-464d-8b2c-e1fd13744de6",
+    "session_id": "run-d7c370733626",
+    "status": "done",
+    "result_path": "blobs/jobs/9647d19f-1652-464d-8b2c-e1fd13744de6/result.ct",
+    "result_type": "total_hours",
+    "count": 5,
+    "created_at": 1770993198.392957,
+    "finished_at": 1770993198.403945
+  },
+  "aecc5464-8f44-4043-924b-371305cf5869": {
+    "job_id": "aecc5464-8f44-4043-924b-371305cf5869",
+    "session_id": "run-d7c370733626",
+    "status": "done",
+    "result_path": "blobs/jobs/aecc5464-8f44-4043-924b-371305cf5869/result.ct",
+    "result_type": "bonus_pool",
+    "count": 5,
+    "created_at": 1770993198.414569,
+    "finished_at": 1770993198.4268858,
+    "bonus_rate_bps": 1000
+  },
+  "3bb4466a-39c3-4c98-b573-a2a8a2a543d8": {
+    "job_id": "3bb4466a-39c3-4c98-b573-a2a8a2a543d8",
+    "session_id": "run-e3b8d1d4f05a",
+    "status": "done",
+    "result_path": "blobs/jobs/3bb4466a-39c3-4c98-b573-a2a8a2a543d8/result.ct",
+    "result_type": "total_payroll",
+    "count": 5,
+    "created_at": 1770993800.7927868,
+    "finished_at": 1770993800.805689
+  },
+  "886f28fb-386b-4095-a50f-867119836666": {
+    "job_id": "886f28fb-386b-4095-a50f-867119836666",
+    "session_id": "run-e3b8d1d4f05a",
+    "status": "done",
+    "result_path": "blobs/jobs/886f28fb-386b-4095-a50f-867119836666/result.ct",
+    "result_type": "avg_salary",
+    "count": 5,
+    "created_at": 1770993800.809838,
+    "finished_at": 1770993800.833357
+  },
+  "f4454eb0-8c15-42de-8703-ae2585d034b7": {
+    "job_id": "f4454eb0-8c15-42de-8703-ae2585d034b7",
+    "session_id": "run-e3b8d1d4f05a",
+    "status": "done",
+    "result_path": "blobs/jobs/f4454eb0-8c15-42de-8703-ae2585d034b7/result.ct",
+    "result_type": "total_hours",
+    "count": 5,
+    "created_at": 1770993800.8369658,
+    "finished_at": 1770993800.8486521
+  },
+  "44b1b7ed-5697-420b-8422-b982a3478f9c": {
+    "job_id": "44b1b7ed-5697-420b-8422-b982a3478f9c",
+    "session_id": "run-e3b8d1d4f05a",
+    "status": "done",
+    "result_path": "blobs/jobs/44b1b7ed-5697-420b-8422-b982a3478f9c/result.ct",
+    "result_type": "bonus_pool",
+    "count": 5,
+    "created_at": 1770993800.854082,
+    "finished_at": 1770993800.866396,
+    "bonus_rate_bps": 1000
+  },
+  "75eb370e-7f17-4f28-9aaf-132f42aeabd9": {
+    "job_id": "75eb370e-7f17-4f28-9aaf-132f42aeabd9",
+    "session_id": "run-78c91c0a391b",
+    "status": "done",
+    "result_path": "blobs/jobs/75eb370e-7f17-4f28-9aaf-132f42aeabd9/result.ct",
+    "result_type": "total_payroll",
+    "count": 5,
+    "created_at": 1770993967.018197,
+    "finished_at": 1770993967.0343192
+  },
+  "7ee6fb00-2881-49f3-b3a8-d0c36aba78ba": {
+    "job_id": "7ee6fb00-2881-49f3-b3a8-d0c36aba78ba",
+    "session_id": "run-78c91c0a391b",
+    "status": "done",
+    "result_path": "blobs/jobs/7ee6fb00-2881-49f3-b3a8-d0c36aba78ba/result.ct",
+    "result_type": "avg_salary",
+    "count": 5,
+    "created_at": 1770993967.039513,
+    "finished_at": 1770993967.0568068
+  },
+  "b505b1d5-df43-4869-ad9b-b747e04cd558": {
+    "job_id": "b505b1d5-df43-4869-ad9b-b747e04cd558",
+    "session_id": "run-78c91c0a391b",
+    "status": "done",
+    "result_path": "blobs/jobs/b505b1d5-df43-4869-ad9b-b747e04cd558/result.ct",
+    "result_type": "total_hours",
+    "count": 5,
+    "created_at": 1770993967.061856,
+    "finished_at": 1770993967.07327
+  },
+  "a60818aa-70fb-4012-9c72-77ed47512624": {
+    "job_id": "a60818aa-70fb-4012-9c72-77ed47512624",
+    "session_id": "run-78c91c0a391b",
+    "status": "done",
+    "result_path": "blobs/jobs/a60818aa-70fb-4012-9c72-77ed47512624/result.ct",
+    "result_type": "bonus_pool",
+    "count": 5,
+    "created_at": 1770993967.077184,
+    "finished_at": 1770993967.0887759,
+    "bonus_rate_bps": 1000
+  },
+  "7078fc40-1bdf-4dca-b850-d74361cb127d": {
+    "job_id": "7078fc40-1bdf-4dca-b850-d74361cb127d",
+    "session_id": "run-78c91c0a391b",
+    "status": "done",
+    "result_path": "blobs/jobs/7078fc40-1bdf-4dca-b850-d74361cb127d/result.ct",
+    "result_type": "total_payroll",
+    "count": 5,
+    "created_at": 1770993979.131346,
+    "finished_at": 1770993979.144267
+  },
+  "62c6e271-bce0-4563-a367-b03343d20c34": {
+    "job_id": "62c6e271-bce0-4563-a367-b03343d20c34",
+    "session_id": "run-78c91c0a391b",
+    "status": "done",
+    "result_path": "blobs/jobs/62c6e271-bce0-4563-a367-b03343d20c34/result.ct",
+    "result_type": "avg_salary",
+    "count": 5,
+    "created_at": 1770993989.0785532,
+    "finished_at": 1770993989.099877
+  },
+  "5d6114e3-fca0-45a2-b890-6d58e626e1f5": {
+    "job_id": "5d6114e3-fca0-45a2-b890-6d58e626e1f5",
+    "session_id": "run-78c91c0a391b",
+    "status": "done",
+    "result_path": "blobs/jobs/5d6114e3-fca0-45a2-b890-6d58e626e1f5/result.ct",
+    "result_type": "total_hours",
+    "count": 5,
+    "created_at": 1770993994.216661,
+    "finished_at": 1770993994.231779
+  },
+  "b228d067-85c4-411a-b8b1-8775d70442f4": {
+    "job_id": "b228d067-85c4-411a-b8b1-8775d70442f4",
+    "session_id": "run-78c91c0a391b",
+    "status": "done",
+    "result_path": "blobs/jobs/b228d067-85c4-411a-b8b1-8775d70442f4/result.ct",
+    "result_type": "bonus_pool",
+    "count": 5,
+    "created_at": 1770993998.105432,
+    "finished_at": 1770993998.116707,
+    "bonus_rate_bps": 1000
+  },
+  "0f98b1c0-6c8f-4ce4-91fc-38cd89eb9dd8": {
+    "job_id": "0f98b1c0-6c8f-4ce4-91fc-38cd89eb9dd8",
+    "session_id": "run-38acbe5dcece",
+    "status": "done",
+    "result_path": "blobs/jobs/0f98b1c0-6c8f-4ce4-91fc-38cd89eb9dd8/result.ct",
+    "result_type": "total_payroll",
+    "count": 5,
+    "created_at": 1770995877.088938,
+    "finished_at": 1770995877.102442
+  },
+  "0a4e4ff2-f806-4051-a84c-5ee98e51ff70": {
+    "job_id": "0a4e4ff2-f806-4051-a84c-5ee98e51ff70",
+    "session_id": "run-38acbe5dcece",
+    "status": "done",
+    "result_path": "blobs/jobs/0a4e4ff2-f806-4051-a84c-5ee98e51ff70/result.ct",
+    "result_type": "avg_salary",
+    "count": 5,
+    "created_at": 1770995877.110446,
+    "finished_at": 1770995877.127289
+  },
+  "6d285013-8c79-4e04-8d4d-3c96e6c721c5": {
+    "job_id": "6d285013-8c79-4e04-8d4d-3c96e6c721c5",
+    "session_id": "run-38acbe5dcece",
+    "status": "done",
+    "result_path": "blobs/jobs/6d285013-8c79-4e04-8d4d-3c96e6c721c5/result.ct",
+    "result_type": "total_hours",
+    "count": 5,
+    "created_at": 1770995877.13126,
+    "finished_at": 1770995877.142317
+  },
+  "b3d1e40d-21af-4283-b3e4-b8d20de90aca": {
+    "job_id": "b3d1e40d-21af-4283-b3e4-b8d20de90aca",
+    "session_id": "run-38acbe5dcece",
+    "status": "done",
+    "result_path": "blobs/jobs/b3d1e40d-21af-4283-b3e4-b8d20de90aca/result.ct",
+    "result_type": "bonus_pool",
+    "count": 5,
+    "created_at": 1770995877.1476722,
+    "finished_at": 1770995877.159439,
+    "bonus_rate_bps": 1000
+  },
+  "dcbc7bce-815c-4deb-aa57-ee2bce7b2969": {
+    "job_id": "dcbc7bce-815c-4deb-aa57-ee2bce7b2969",
+    "session_id": "run-38acbe5dcece",
+    "status": "done",
+    "result_path": "blobs/jobs/dcbc7bce-815c-4deb-aa57-ee2bce7b2969/result.ct",
+    "result_type": "avg_salary",
+    "count": 2,
+    "created_at": 1770995959.1935139,
+    "finished_at": 1770995959.213987
   }
 }

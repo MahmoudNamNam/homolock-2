@@ -5,7 +5,7 @@ Privacy-preserving HR/Payroll computations using **Homomorphic Encryption (HE)**
 ## Overview
 
 - **Client**: Python CLI (`server_py/client/`) — key generation, encryption, upload, decryption, and CRUD on encrypted HR employee data. Requires PySEAL (`seal` package).
-- **Server**: Python FastAPI (`server_py/`) — file-based storage; runs HE in Python (PySEAL) only. No C++ build.
+- **Server**: Python FastAPI (`server_py/`) — file-based storage; runs HE in Python (PySEAL) only.
 
 ### Cryptography (MVP)
 
@@ -23,12 +23,81 @@ Privacy-preserving HR/Payroll computations using **Homomorphic Encryption (HE)**
 
 ---
 
+## Quick start
+
+**1. Install dependencies.** From repo root:
+
+```bash
+cd server_py
+pip install -r requirements.txt
+```
+
+**PySEAL** (required for encrypt/decrypt and server compute): try `pip install seal` first. If no wheel is available, build from source, e.g. [Huelse/SEAL-Python](https://github.com/Huelse/SEAL-Python), or run `server_py/install_seal_python.sh` (see script comment: use only if you need to build from source).
+
+**2. Start the server** (one terminal):
+
+```bash
+cd server_py
+uvicorn app.main:app --host 0.0.0.0 --port 8000
+```
+
+**3. Run the full flow** (another terminal, from repo root):
+
+```bash
+export PYTHONPATH="$(pwd)/server_py:$PYTHONPATH"
+python3 -m client.cli run
+```
+
+This runs: init-context → keygen → encrypt-hr (from `data/employees.csv`) → upload → compute → fetch-decrypt, and prints the four results (total payroll, avg salary, total hours, bonus pool). Use `--server http://HOST:8000` if the server is not on localhost.
+
+**Or run the demo** (starts server in background + runs the client):
+
+```bash
+./demo.sh
+```
+
+---
+
+## Step-by-step (optional)
+
+If you prefer to run each step yourself:
+
+**1. Start the server** (one terminal): `cd server_py && uvicorn app.main:app --host 0.0.0.0 --port 8000`
+
+**2. Client** (from repo root):
+
+```bash
+export PYTHONPATH="$(pwd)/server_py:$PYTHONPATH"
+python3 -m client.cli init-context              # creates out/params.seal
+python3 -m client.cli keygen                    # creates keys in out/
+python3 -m client.cli encrypt-hr                # reads data/employees.csv or --json data/employees.json → out/*.ct
+python3 -m client.cli upload-session --session-id my-session
+python3 -m client.cli upload-data --session-id my-session
+python3 -m client.cli compute --session-id my-session   # prints 4 job_ids
+python3 -m client.cli fetch-decrypt --job-id <job_id>   # repeat for each job_id
+```
+
+---
+
+## CRUD employees (optional)
+
+Add, list, get, or delete one employee at a time:
+
+```bash
+python3 -m client.cli employee create --session-id my-session --employee-id 1001 --from-csv
+python3 -m client.cli employee list --session-id my-session
+python3 -m client.cli employee get --session-id my-session --employee-id 1001
+python3 -m client.cli employee delete --session-id my-session --employee-id 1001
+```
+
+---
+
 ## Run (Python only)
 
 ### Prerequisites
 
 - Python 3.10+, pip
-- **PySEAL** for HE (client encrypt/decrypt and server compute). Install separately, e.g. [Huelse/SEAL-Python](https://github.com/Huelse/SEAL-Python).
+- **PySEAL** for HE: try `pip install seal` first; otherwise build from source (e.g. [Huelse/SEAL-Python](https://github.com/Huelse/SEAL-Python)) or use `server_py/install_seal_python.sh`.
 
 ### 1. Server
 
@@ -42,19 +111,14 @@ If PySEAL is not installed, `/v1/compute/*` will return 503 (HE engine unavailab
 
 ### 2. Client (from repo root)
 
-Set `PYTHONPATH` so the client package is found:
+Set `PYTHONPATH` and run the full flow in one command:
 
 ```bash
 export PYTHONPATH="$(pwd)/server_py:$PYTHONPATH"
-python3 -m client.cli init-context --poly 8192
-python3 -m client.cli keygen
-python3 -m client.cli encrypt-hr
-python3 -m client.cli upload-session --session-id my-session
-python3 -m client.cli upload-data --session-id my-session
-python3 -m client.cli compute --session-id my-session
-# Then fetch-decrypt each job_id printed by compute
-python3 -m client.cli fetch-decrypt --job-id <job_id>
+python3 -m client.cli run
 ```
+
+Or run step-by-step: `init-context --poly 8192`, `keygen`, `encrypt-hr`, `upload-session --session-id my-session`, `upload-data --session-id my-session`, `compute --session-id my-session`, then `fetch-decrypt --job-id <job_id>` for each result.
 
 CRUD employees:
 
@@ -77,14 +141,7 @@ pytest tests/ -v
 
 ### 4. End-to-end demo
 
-From repo root:
-
-```bash
-chmod +x demo.sh
-./demo.sh
-```
-
-Runs server and Python client (init-context → keygen → encrypt-hr → upload → compute → fetch-decrypt). Requires PySEAL for full flow.
+From repo root: `chmod +x demo.sh && ./demo.sh`. Starts the server and runs `client.cli run`. Requires PySEAL for full flow.
 
 ---
 
@@ -92,9 +149,10 @@ Runs server and Python client (init-context → keygen → encrypt-hr → upload
 
 | Command | Description |
 |--------|-------------|
+| `run [--server URL] [--session-id ID] [--csv path] [--poly 4096\|8192] [--bonus-bps N] [--no-decrypt]` | Full flow: init → keygen → encrypt → upload → compute → fetch-decrypt (prints four results). Use `--no-decrypt` to stop after compute and print job_ids only. |
 | `init-context [--poly 4096\|8192]` | Create `out/params.seal` (default poly=8192). |
 | `keygen` | Generate secret/public/relin keys under `out/`. **Never upload secret_key.seal.** |
-| `encrypt-hr [--csv path]` | Read `data/employees.csv`; write `out/salary.ct`, `out/hours.ct`, `out/bonus_points.ct`, `out/meta.json`. |
+| `encrypt-hr [--csv path \| --json path]` | Read employees from CSV or JSON (array of `{employee_id, salary_cents, hours, bonus_points}`); write `out/salary.ct`, `out/hours.ct`, `out/bonus_points.ct`, `out/meta.json`. |
 | `upload-session [--server URL] [--session-id ID]` | POST keys to `/v1/session/keys`. |
 | `upload-data --session-id ID [--server URL]` | POST ciphertexts to `/v1/session/data`. |
 | `compute --session-id ID [--server URL] [--bonus-bps 1000]` | Trigger total_payroll, avg_salary, total_hours, bonus_pool; prints job_ids. |
@@ -108,14 +166,78 @@ Runs server and Python client (init-context → keygen → encrypt-hr → upload
 
 ## API (FastAPI)
 
-- `GET /health` → `{"status":"ok"}`
-- `POST /v1/session/keys` — body: `session_id`, `params_b64`, `public_key_b64`, `relin_keys_b64`, optional `galois_keys_b64`
-- `POST /v1/session/data` — body: `session_id`, `salary_ct_b64`, `hours_ct_b64`, `bonus_points_ct_b64`, `count`
-- `POST /v1/compute/total_payroll` — body: `session_id` → `job_id`
-- `POST /v1/compute/avg_salary` — body: `session_id` → `job_id`, `count`
-- `POST /v1/compute/total_hours` — body: `session_id` → `job_id`
-- `POST /v1/compute/bonus_pool` — body: `session_id`, `bonus_rate_bps` → `job_id`, `bonus_rate_bps`
-- `GET /v1/result/{job_id}` → `status`, `result_ciphertext_b64`, `result_type`, optional `count`, `bonus_rate_bps`
+All endpoints are relative to the server base URL (e.g. `http://localhost:8000`). Paths and storage are relative to `HOMOLOCK_DATA_DIR` (default `data/`).
+
+- **Swagger UI:** `http://localhost:8000/docs` when the server is running.
+- **Postman:** Import `server_py/postman/HomoLock-HR.postman_collection.json` and see `server_py/postman/POSTMAN.md` for how to run all endpoints.
+
+### Health
+
+| Method | Path | Description |
+|--------|------|-------------|
+| `GET` | `/health` | Liveness. Response: `{"status":"ok"}`. |
+
+### One-shot run (zero config)
+
+| Method | Path | Description |
+|--------|------|-------------|
+| `POST` | `/v1/run` | Upload keys + data and run all four computations. **Body optional:** omit or send `{}` to use static data from `server_py/static/` (run `python -m scripts.generate_static_data` once). With body: all fields optional; omit `params_b64` to use static. Response: `{"session_id": "...", "job_ids": {"total_payroll": "...", "avg_salary": "...", "total_hours": "...", "bonus_pool": "..."}}`. |
+
+### Session (keys and batch data)
+
+| Method | Path | Description |
+|--------|------|-------------|
+| `POST` | `/v1/session/keys` | Create session with HE params and public keys. Body: `session_id`, `params_b64`, `public_key_b64`, `relin_keys_b64`, optional `galois_keys_b64`. |
+| `POST` | `/v1/session/data` | Upload batch ciphertexts for a session. Body: `session_id`, `salary_ct_b64`, `hours_ct_b64`, `bonus_points_ct_b64`, `count`. |
+
+### Compute
+
+| Method | Path | Description |
+|--------|------|-------------|
+| `POST` | `/v1/compute/total_payroll` | Body: `session_id`. Response: `{"job_id": "..."}`. |
+| `POST` | `/v1/compute/avg_salary` | Body: `session_id`. Response: `{"job_id": "...", "count": N}`. |
+| `POST` | `/v1/compute/total_hours` | Body: `session_id`. Response: `{"job_id": "..."}`. |
+| `POST` | `/v1/compute/bonus_pool` | Body: `session_id`, optional `bonus_rate_bps` (default 1000). Response: `{"job_id": "...", "bonus_rate_bps": N}`. |
+
+### Results
+
+| Method | Path | Description |
+|--------|------|-------------|
+| `GET` | `/v1/result/{job_id}` | Get job result. Response: `status`, `result_ciphertext_b64`, `result_type`, optional `count`, `bonus_rate_bps`. Decrypt `result_ciphertext_b64` locally with the secret key. |
+
+### CRUD: employees (per-employee encrypted data)
+
+| Method | Path | Description |
+|--------|------|-------------|
+| `POST` | `/v1/session/{session_id}/employees` | Create or replace one employee. Body: `employee_id`, `salary_ct_b64`, `hours_ct_b64`, `bonus_points_ct_b64`. |
+| `GET` | `/v1/session/{session_id}/employees` | List employee IDs. Response: `employee_ids`, `count`. |
+| `GET` | `/v1/session/{session_id}/employees/{employee_id}` | Get one employee’s encrypted payload. |
+| `PUT` | `/v1/session/{session_id}/employees/{employee_id}` | Update employee (body `employee_id` must match path). |
+| `DELETE` | `/v1/session/{session_id}/employees/{employee_id}` | Remove employee data. |
+
+### Using only the API (everything from endpoints)
+
+Keys and encryption stay on the client (never send the secret key). Two options:
+
+- **Zero config:** Run `python -m scripts.generate_static_data` once, then `POST /v1/run` with body `{}`. Use `scripts.fetch_and_decrypt_results` to see decrypted results.
+- **Custom data:** Generate keys and encrypt with the CLI (`init-context`, `keygen`, `encrypt-hr`), then `POST /v1/run` with full body (or `POST /v1/session/keys` + `POST /v1/session/data` + the four `POST /v1/compute/*`), then `GET /v1/result/{job_id}` for each and decrypt locally.
+
+### Static keys and ciphertexts
+
+To get fixed keys and ciphertexts for testing or for calling `POST /v1/run` without running the full CLI each time:
+
+```bash
+cd server_py
+python -m scripts.generate_static_data
+```
+
+This writes to `server_py/static/`: `params.seal`, `public_key.seal`, `relin_keys.seal`, optional `galois_keys.seal`, `secret_key.seal`, `salary.ct`, `hours.ct`, `bonus_points.ct`, `meta.json` (5 fixed demo rows). Base64-encode these files (except `secret_key.seal`) for the request body; use `secret_key.seal` locally to decrypt results. Do not upload the secret key.
+
+**See real (decrypted) results after `POST /v1/run`:** pipe the run response into the decrypt script (from `server_py`):
+```bash
+curl -s -X POST http://localhost:8000/v1/run -H "Content-Type: application/json" -d '{}' | python -m scripts.fetch_and_decrypt_results --server http://localhost:8000
+```
+This fetches each job result and decrypts with `static/secret_key.seal`, then prints total payroll, avg salary, total hours, and bonus pool.
 
 ### CRUD: HR employees
 
@@ -140,6 +262,34 @@ Runs server and Python client (init-context → keygen → encrypt-hr → upload
 ---
 
 ## Deploy on EC2
+
+### Quick setup & run (copy-paste on the instance)
+
+After launching Ubuntu 22.04 and opening **port 8000** in the security group:
+
+```bash
+# 1. SSH in
+ssh -i your-key.pem ubuntu@<EC2_PUBLIC_IP>
+
+# 2. One-time setup (run once)
+sudo apt update && sudo apt install -y python3.10 python3.10-venv python3-pip git
+cd ~
+git clone <YOUR_REPO_URL> Homolock
+cd Homolock/server_py
+python3.10 -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt
+sudo mkdir -p /var/lib/homolock && sudo chown ubuntu:ubuntu /var/lib/homolock
+
+# 3. Run the server (foreground)
+export HOMOLOCK_DATA_DIR=/var/lib/homolock
+uvicorn app.main:app --host 0.0.0.0 --port 8000
+```
+
+Then from your laptop: use the client with `--server http://<EC2_PUBLIC_IP>:8000`.  
+For a persistent server (survives logout), use the systemd steps below.
+
+---
 
 ### 1. Launch instance
 
@@ -175,7 +325,7 @@ pip install -r requirements.txt
 ```
 
 **PySEAL on the server (for HE compute):**  
-If you have a prebuilt `seal` wheel for your platform, install it with `pip install seal`. Otherwise build from source, e.g. [Huelse/SEAL-Python](https://github.com/Huelse/SEAL-Python) (requires CMake and a C++ toolchain on the instance). Without `seal`, the server runs but `/v1/compute/*` will return 503.
+If you have a prebuilt `seal` wheel for your platform, install it with `pip install seal`. Otherwise build from source, e.g. [Huelse/SEAL-Python](https://github.com/Huelse/SEAL-Python). Without `seal`, the server runs but `/v1/compute/*` will return 503.
 
 ### 5. Data directory and env
 
@@ -239,12 +389,16 @@ python3 -m client.cli compute --session-id my-session --server http://<EC2_PUBLI
 
 Replace `<EC2_PUBLIC_IP>` with your instance’s public IPv4. For HTTPS and a domain, put a reverse proxy (e.g. Nginx or Caddy) in front of the app and use TLS.
 
+**Using the API when deployed:** See **`server_py/docs/DEPLOY-AWS.md`** for how to call the API from Postman, CLI, or cURL once the server is running on AWS (base URL, one-shot run, static data).
+
 ---
+
+**Seeing actual data and which operations are allowed:** See **`server_py/docs/DATA_AND_OPS.md`** (aggregate vs per-employee decryption, server ops = sum/count only, client ops = anything on plaintext).
 
 ## Limitations
 
 - **BFV**: Integer-only; no real-number division on ciphertext.
-- **PySEAL required**: Server and client need the `seal` package for HE; no C++ worker fallback.
+- **PySEAL required**: Server and client need the `seal` package for HE.
 - Storage is file-based; no auth.
 
 Never upload `secret_key.seal` to the server or any untrusted host.

@@ -1,0 +1,298 @@
+{
+  "info": {
+    "name": "HomoLock-HR",
+    "description": "Privacy-preserving HR/payroll API. Client encrypts; server computes on ciphertext.\n\n**Run all (static data):** Use folder \"1 - Quick flow (static)\" and run it in order. Run request returns session_id and job_ids; Test script saves them so \"Get result\" requests work.\n\n**Base URL:** {{base_url}} (default http://localhost:8000)",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "base_url", "value": "http://localhost:8000" },
+    { "key": "postman_keys_helper", "value": "http://127.0.0.1:9999", "description": "Optional: local helper (serve_postman_keys). Auto-fill uses API: GET /v1/static/session-keys and session-data" },
+    { "key": "session_id", "value": "my-session" },
+    { "key": "job_id_total_payroll", "value": "" },
+    { "key": "job_id_avg_salary", "value": "" },
+    { "key": "job_id_total_hours", "value": "" },
+    { "key": "job_id_bonus_pool", "value": "" },
+    { "key": "employee_id", "value": "emp-001" }
+  ],
+  "item": [
+    {
+      "name": "1 - Quick flow (static)",
+      "description": "Run these in order. 1) Health 2) Run All (uses server static data) 3) Get each result. Variables session_id and job_id_* are set by the Run request.",
+      "item": [
+        {
+          "name": "Health",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{base_url}}/health",
+            "description": "Liveness check."
+          }
+        },
+        {
+          "name": "Run All (static data)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const r = pm.response.json();",
+                  "if (r.session_id) pm.collectionVariables.set('session_id', r.session_id);",
+                  "if (r.job_ids) {",
+                  "  pm.collectionVariables.set('job_id_total_payroll', r.job_ids.total_payroll || '');",
+                  "  pm.collectionVariables.set('job_id_avg_salary', r.job_ids.avg_salary || '');",
+                  "  pm.collectionVariables.set('job_id_total_hours', r.job_ids.total_hours || '');",
+                  "  pm.collectionVariables.set('job_id_bonus_pool', r.job_ids.bonus_pool || '');",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{}"
+            },
+            "url": "{{base_url}}/v1/run",
+            "description": "One-shot: use static data from server_py/static/ (no body or {}). Returns session_id and job_ids. Get results with GET /v1/result/{job_id}."
+          }
+        },
+        {
+          "name": "Get Result - total_payroll",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{base_url}}/v1/result/{{job_id_total_payroll}}",
+            "description": "Returns result ciphertext (base64). Decrypt locally with secret key."
+          }
+        },
+        {
+          "name": "Get Result - avg_salary",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{base_url}}/v1/result/{{job_id_avg_salary}}"
+          }
+        },
+        {
+          "name": "Get Result - total_hours",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{base_url}}/v1/result/{{job_id_total_hours}}"
+          }
+        },
+        {
+          "name": "Get Result - bonus_pool",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{base_url}}/v1/result/{{job_id_bonus_pool}}"
+          }
+        }
+      ]
+    },
+    {
+      "name": "2 - Session",
+      "item": [
+        {
+          "name": "Get Session Keys (body)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{base_url}}/v1/static/session-keys?session_id={{session_id}}",
+            "description": "Run this first. Copy the full response body, then paste it into the Body of \"Session Keys\" (POST) below. (Pre-request script was removed because the payload is too large for Postman's script response limit.)"
+          }
+        },
+        {
+          "name": "Get Session Data (body)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{base_url}}/v1/static/session-data?session_id={{session_id}}",
+            "description": "Run this first. Copy the full response body, then paste it into the Body of \"Session Data\" (POST) below."
+          }
+        },
+        {
+          "name": "Session Keys",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"session_id\": \"{{session_id}}\",\n  \"params_b64\": \"<paste from Get Session Keys (body) response>\"\n}"
+            },
+            "url": "{{base_url}}/v1/session/keys",
+            "description": "Create session with HE params and public keys. Run \"Get Session Keys (body)\" above, copy its response, paste here as Body. Endpoints only, no CLI."
+          }
+        },
+        {
+          "name": "Session Data",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"session_id\": \"{{session_id}}\",\n  \"salary_ct_b64\": \"<paste from Get Session Data (body) response>\"\n}"
+            },
+            "url": "{{base_url}}/v1/session/data",
+            "description": "Upload batch ciphertexts. Run \"Get Session Data (body)\" above, copy its response, paste here as Body. Call after session/keys."
+          }
+        }
+      ]
+    },
+    {
+      "name": "3 - Compute",
+      "item": [
+        {
+          "name": "Compute Total Payroll",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"session_id\": \"{{session_id}}\"\n}" },
+            "url": "{{base_url}}/v1/compute/total_payroll"
+          }
+        },
+        {
+          "name": "Compute Avg Salary",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"session_id\": \"{{session_id}}\"\n}" },
+            "url": "{{base_url}}/v1/compute/avg_salary"
+          }
+        },
+        {
+          "name": "Compute Total Hours",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"session_id\": \"{{session_id}}\"\n}" },
+            "url": "{{base_url}}/v1/compute/total_hours"
+          }
+        },
+        {
+          "name": "Compute Bonus Pool",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"session_id\": \"{{session_id}}\",\n  \"bonus_rate_bps\": 1000\n}"
+            },
+            "url": "{{base_url}}/v1/compute/bonus_pool"
+          }
+        }
+      ]
+    },
+    {
+      "name": "4 - Results",
+      "item": [
+        {
+          "name": "Get Result by job_id",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{base_url}}/v1/result/{{job_id_total_payroll}}",
+            "description": "Replace path with any job_id. Returns result_ciphertext_b64; decrypt locally."
+          }
+        }
+      ]
+    },
+    {
+      "name": "5 - Employees (CRUD)",
+      "item": [
+        {
+          "name": "Create employees from batch",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"employee_ids\": [\"1001\", \"1002\", \"1003\", \"1004\", \"1005\", \"1006\", \"1007\", \"1008\", \"1009\", \"1010\", \"1011\", \"1012\", \"1013\", \"1014\", \"1015\", \"1016\", \"1017\", \"1018\", \"1019\", \"1020\"]\n}"
+            },
+            "url": "{{base_url}}/v1/session/{{session_id}}/employees/from-batch",
+            "description": "After Run All or session/data: creates per-employee entries from batch ciphertexts so GET .../employees returns them. Body order = batch order (same as CSV). Omit body to use ids \"1\", \"2\", ... \"N\"."
+          }
+        },
+        {
+          "name": "Create Employee (plain values)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"employee_id\": \"{{employee_id}}\",\n  \"salary_cents\": 850000,\n  \"hours\": 160,\n  \"bonus_points\": 10\n}"
+            },
+            "url": "{{base_url}}/v1/session/{{session_id}}/employees/plain",
+            "description": "Create or replace one employee with plain numbers. No base64: send employee_id, salary_cents, hours, bonus_points. Server encrypts and stores."
+          }
+        },
+        {
+          "name": "Create/Update Employee (ciphertext)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"employee_id\": \"{{employee_id}}\",\n  \"salary_ct_b64\": \"<base64>\",\n  \"hours_ct_b64\": \"<base64>\",\n  \"bonus_points_ct_b64\": \"<base64>\"\n}"
+            },
+            "url": "{{base_url}}/v1/session/{{session_id}}/employees",
+            "description": "Create or replace one employee with pre-encrypted base64 (client encrypts)."
+          }
+        },
+        {
+          "name": "List Employees",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{base_url}}/v1/session/{{session_id}}/employees"
+          }
+        },
+        {
+          "name": "Get Employee",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{base_url}}/v1/session/{{session_id}}/employees/{{employee_id}}"
+          }
+        },
+        {
+          "name": "Adjust Employee (add deltas)",
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"salary_delta\": 50000,\n  \"hours_delta\": 0,\n  \"bonus_points_delta\": 2\n}"
+            },
+            "url": "{{base_url}}/v1/session/{{session_id}}/employees/{{employee_id}}/adjust",
+            "description": "Add deltas using plain integers. Send salary_delta, hours_delta, bonus_points_delta (omit to leave unchanged). Server encrypts and adds; no base64 needed."
+          }
+        },
+        {
+          "name": "Update Employee",
+          "request": {
+            "method": "PUT",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"employee_id\": \"{{employee_id}}\",\n  \"salary_ct_b64\": \"<base64>\",\n  \"hours_ct_b64\": \"<base64>\",\n  \"bonus_points_ct_b64\": \"<base64>\"\n}"
+            },
+            "url": "{{base_url}}/v1/session/{{session_id}}/employees/{{employee_id}}"
+          }
+        },
+        {
+          "name": "Delete Employee",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": "{{base_url}}/v1/session/{{session_id}}/employees/{{employee_id}}"
+          }
+        }
+      ]
+    }
+  ]
+}
