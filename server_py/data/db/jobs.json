@@ -1,0 +1,125 @@
+{
+  "98442805-7ac9-4c3a-98a4-6684a63de92c": {
+    "job_id": "98442805-7ac9-4c3a-98a4-6684a63de92c",
+    "session_id": "demo-1770972268",
+    "status": "done",
+    "result_path": "/Users/nmnm/Coding/Homolock/server_py/data/blobs/jobs/98442805-7ac9-4c3a-98a4-6684a63de92c/result.ct",
+    "result_type": "total_payroll",
+    "count": 20,
+    "created_at": 1770972270.0383072,
+    "finished_at": 1770972270.483954
+  },
+  "0693ec90-9607-4b3b-b64a-dfb23e625e50": {
+    "job_id": "0693ec90-9607-4b3b-b64a-dfb23e625e50",
+    "session_id": "demo-1770972268",
+    "status": "done",
+    "result_path": "/Users/nmnm/Coding/Homolock/server_py/data/blobs/jobs/0693ec90-9607-4b3b-b64a-dfb23e625e50/result.ct",
+    "result_type": "avg_salary",
+    "count": 20,
+    "created_at": 1770972270.4890938,
+    "finished_at": 1770972270.51871
+  },
+  "51d73257-8bcd-4224-bb94-8f6836667b41": {
+    "job_id": "51d73257-8bcd-4224-bb94-8f6836667b41",
+    "session_id": "demo-1770972268",
+    "status": "done",
+    "result_path": "/Users/nmnm/Coding/Homolock/server_py/data/blobs/jobs/51d73257-8bcd-4224-bb94-8f6836667b41/result.ct",
+    "result_type": "total_hours",
+    "count": 20,
+    "created_at": 1770972270.523902,
+    "finished_at": 1770972270.5494258
+  },
+  "232c6720-d438-48c6-870c-69fc43579899": {
+    "job_id": "232c6720-d438-48c6-870c-69fc43579899",
+    "session_id": "demo-1770972268",
+    "status": "done",
+    "result_path": "/Users/nmnm/Coding/Homolock/server_py/data/blobs/jobs/232c6720-d438-48c6-870c-69fc43579899/result.ct",
+    "result_type": "bonus_pool",
+    "count": 20,
+    "created_at": 1770972270.5545301,
+    "finished_at": 1770972270.5794592,
+    "bonus_rate_bps": 1000
+  },
+  "503107df-82d4-4347-b069-e012a70e1e54": {
+    "job_id": "503107df-82d4-4347-b069-e012a70e1e54",
+    "session_id": "demo-1770972310",
+    "status": "done",
+    "result_path": "/Users/nmnm/Coding/Homolock/server_py/data/blobs/jobs/503107df-82d4-4347-b069-e012a70e1e54/result.ct",
+    "result_type": "total_payroll",
+    "count": 20,
+    "created_at": 1770972311.703527,
+    "finished_at": 1770972311.7301528
+  },
+  "75368187-7671-4270-b250-3249c343893a": {
+    "job_id": "75368187-7671-4270-b250-3249c343893a",
+    "session_id": "demo-1770972310",
+    "status": "done",
+    "result_path": "/Users/nmnm/Coding/Homolock/server_py/data/blobs/jobs/75368187-7671-4270-b250-3249c343893a/result.ct",
+    "result_type": "avg_salary",
+    "count": 20,
+    "created_at": 1770972311.736619,
+    "finished_at": 1770972311.762081
+  },
+  "d074bcfd-180a-4686-82b6-3542281da574": {
+    "job_id": "d074bcfd-180a-4686-82b6-3542281da574",
+    "session_id": "demo-1770972310",
+    "status": "done",
+    "result_path": "/Users/nmnm/Coding/Homolock/server_py/data/blobs/jobs/d074bcfd-180a-4686-82b6-3542281da574/result.ct",
+    "result_type": "total_hours",
+    "count": 20,
+    "created_at": 1770972311.768785,
+    "finished_at": 1770972311.794039
+  },
+  "bf988a32-cfcf-41b8-af48-77dc55e7063b": {
+    "job_id": "bf988a32-cfcf-41b8-af48-77dc55e7063b",
+    "session_id": "demo-1770972310",
+    "status": "done",
+    "result_path": "/Users/nmnm/Coding/Homolock/server_py/data/blobs/jobs/bf988a32-cfcf-41b8-af48-77dc55e7063b/result.ct",
+    "result_type": "bonus_pool",
+    "count": 20,
+    "created_at": 1770972311.800679,
+    "finished_at": 1770972311.827277,
+    "bonus_rate_bps": 1000
+  },
+  "493665db-ffce-4174-a85f-e30e000198dd": {
+    "job_id": "493665db-ffce-4174-a85f-e30e000198dd",
+    "session_id": "demo-1770972614",
+    "status": "done",
+    "result_path": "/Users/nmnm/Coding/Homolock/server_py/data/blobs/jobs/493665db-ffce-4174-a85f-e30e000198dd/result.ct",
+    "result_type": "total_payroll",
+    "count": 20,
+    "created_at": 1770972616.072885,
+    "finished_at": 1770972616.477579
+  },
+  "d088a2a2-b286-4d19-a994-c3f8142b8c58": {
+    "job_id": "d088a2a2-b286-4d19-a994-c3f8142b8c58",
+    "session_id": "demo-1770972614",
+    "status": "done",
+    "result_path": "/Users/nmnm/Coding/Homolock/server_py/data/blobs/jobs/d088a2a2-b286-4d19-a994-c3f8142b8c58/result.ct",
+    "result_type": "avg_salary",
+    "count": 20,
+    "created_at": 1770972616.4830568,
+    "finished_at": 1770972616.5131872
+  },
+  "3dd5a286-b2ce-444f-b4ad-2814aa8effd7": {
+    "job_id": "3dd5a286-b2ce-444f-b4ad-2814aa8effd7",
+    "session_id": "demo-1770972614",
+    "status": "done",
+    "result_path": "/Users/nmnm/Coding/Homolock/server_py/data/blobs/jobs/3dd5a286-b2ce-444f-b4ad-2814aa8effd7/result.ct",
+    "result_type": "total_hours",
+    "count": 20,
+    "created_at": 1770972616.5181692,
+    "finished_at": 1770972616.544849
+  },
+  "d993dcac-425f-4ee2-ba43-6e33144b9b64": {
+    "job_id": "d993dcac-425f-4ee2-ba43-6e33144b9b64",
+    "session_id": "demo-1770972614",
+    "status": "done",
+    "result_path": "/Users/nmnm/Coding/Homolock/server_py/data/blobs/jobs/d993dcac-425f-4ee2-ba43-6e33144b9b64/result.ct",
+    "result_type": "bonus_pool",
+    "count": 20,
+    "created_at": 1770972616.549273,
+    "finished_at": 1770972616.575399,
+    "bonus_rate_bps": 1000
+  }
+}
