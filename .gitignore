@@ -1,5 +1,7 @@
 .venv/
 __pycache__/
+# Client output (params, keys, ciphertexts — never commit secret_key.seal)
+out/
 .DS_Store
 .idea/
 .vscode/

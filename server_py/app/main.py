@@ -1,6 +1,6 @@
 """
 HomoLock-HR FastAPI server.
-Uses file-based storage (JSON + blob files) for sessions and jobs; runs C++ worker via subprocess.
+File-based storage (JSON + blobs). HE via Python (PySEAL) only. CRUD on encrypted HR employee data.
 Secret key is NEVER stored or logged.
 """
 
@@ -9,7 +9,7 @@ import logging
 import os
 import re
 import shutil
-import subprocess
+import struct
 import time
 import uuid
 from pathlib import Path
@@ -18,6 +18,15 @@ from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 
 from app.storage.file_db import FileDB
+from app.he_engine import is_available as _he_available, run_sum as _he_run_sum
+
+# Lazy alias so we can use he_engine.is_available / he_engine.run_sum
+class _HeEngine:
+    is_available = staticmethod(_he_available)
+    run_sum = staticmethod(_he_run_sum)
+
+
+he_engine = _HeEngine
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -27,16 +36,6 @@ app = FastAPI(title="HomoLock-HR", version="0.1.0")
 # File-based storage: base dir from env (default ./data relative to cwd)
 DATA_DIR = Path(os.environ.get("HOMOLOCK_DATA_DIR", "data")).resolve()
 db = FileDB(DATA_DIR)
-
-# Path to C++ worker binary (env or relative to server_py)
-def _worker_bin() -> str:
-    if os.environ.get("HOMOLOCK_WORKER"):
-        return os.environ["HOMOLOCK_WORKER"]
-    base = Path(__file__).resolve().parent.parent
-    return str(base / "cpp_worker" / "build" / "homolock_worker")
-
-
-WORKER_BIN = _worker_bin()
 
 # Session ID: non-empty, alphanumeric + hyphen + underscore (no path traversal)
 SESSION_ID_RE = re.compile(r"^[a-zA-Z0-9_-]+$")
@@ -76,9 +75,24 @@ class BonusPoolRequest(BaseModel):
     bonus_rate_bps: int = 1000
 
 
+class EmployeeDataRequest(BaseModel):
+    """Single employee encrypted payload (create/update)."""
+    employee_id: str
+    salary_ct_b64: str
+    hours_ct_b64: str
+    bonus_points_ct_b64: str
+
+
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
+
+EMPLOYEE_ID_RE = re.compile(r"^[a-zA-Z0-9_-]+$")
+
+
+def _validate_employee_id(employee_id: str) -> None:
+    if not employee_id or not EMPLOYEE_ID_RE.match(employee_id):
+        raise HTTPException(status_code=400, detail="Invalid employee_id (alphanumeric, hyphen, underscore only)")
 
 def get_session(session_id: str) -> dict:
     """Return session doc from FileDB; 404 if not found."""
@@ -89,33 +103,87 @@ def get_session(session_id: str) -> dict:
     return s
 
 
-def run_worker(op: str, work_dir: Path, extra: list[str] | None = None) -> Path:
-    """Run homolock_worker in work_dir; return path to result.ct. Worker expects params.seal, relin_keys.seal, public_key.seal, and salary.ct or hours.ct."""
+def _run_compute(op: str, work_dir: Path) -> Path:
+    """Run HE sum via Python (PySEAL). Returns path to result.ct."""
+    if not he_engine.is_available():
+        raise HTTPException(
+            status_code=503,
+            detail="HE engine unavailable. Install PySEAL (e.g. Huelse/SEAL-Python) so the server can run homomorphic computations.",
+        )
     result_ct = work_dir / "result.ct"
-    cmd = [
-        WORKER_BIN,
-        "--op", op,
-        "--params", str(work_dir / "params.seal"),
-        "--relin", str(work_dir / "relin_keys.seal"),
-        "--pk", str(work_dir / "public_key.seal"),
-        "--out", str(result_ct),
-    ]
-    if op in ("total_payroll", "avg_salary", "bonus_pool"):
-        cmd += ["--in", str(work_dir / "salary.ct")]
-    elif op == "total_hours":
-        cmd += ["--in", str(work_dir / "hours.ct")]
+    try:
+        out = he_engine.run_sum(work_dir, op)
+        if out is not None and out.exists():
+            return out
+    except Exception as e:
+        logger.exception("Python HE engine failed: %s", e)
+        raise HTTPException(status_code=500, detail=f"HE computation failed: {e}")
+    raise HTTPException(status_code=500, detail="HE engine did not produce result.ct")
+
+
+def _merge_employee_ct_files(blob_dir: Path, field: str, out_path: Path) -> int:
+    """Merge per-employee ct files (employees/{id}/{field}.ct) into one file; return count."""
+    employees_dir = blob_dir / "employees"
+    if not employees_dir.exists():
+        return 0
+    parts: list[bytes] = []
+    count = 0
+    for emp_dir in sorted(employees_dir.iterdir()):
+        if not emp_dir.is_dir():
+            continue
+        f = emp_dir / f"{field}.ct"
+        if not f.exists():
+            continue
+        data = f.read_bytes()
+        if len(data) < 8:
+            continue
+        (n,) = struct.unpack("<I", data[:4])
+        offset = 4
+        for _ in range(n):
+            if offset + 4 > len(data):
+                break
+            (ln,) = struct.unpack("<I", data[offset : offset + 4])
+            offset += 4
+            if offset + ln > len(data):
+                break
+            parts.append(data[offset : offset + ln])
+            count += 1
+            offset += ln
+    if not parts:
+        return 0
+    with open(out_path, "wb") as out:
+        out.write(struct.pack("<I", count))
+        for p in parts:
+            out.write(struct.pack("<I", len(p)))
+            out.write(p)
+    return count
+
+
+def _prepare_compute_input(s: dict, blob_dir: Path, job_dir: Path, op: str) -> int:
+    """Copy or merge inputs into job_dir; return employee count for this op."""
+    employees = s.get("employees") or {}
+    if employees:
+        # Per-employee CRUD: merge employees' cts into salary.ct / hours.ct
+        if op in ("total_payroll", "avg_salary", "bonus_pool"):
+            n = _merge_employee_ct_files(blob_dir, "salary", job_dir / "salary.ct")
+        else:
+            n = _merge_employee_ct_files(blob_dir, "hours", job_dir / "hours.ct")
+        if n == 0:
+            raise HTTPException(status_code=400, detail="No employee data; add employees first")
     else:
-        raise ValueError(f"Unknown op: {op}")
-    if extra:
-        cmd += extra
-    logger.info("Running worker (op=%s, cwd=%s)", op, work_dir)
-    proc = subprocess.run(cmd, cwd=work_dir, capture_output=True, text=True, timeout=120)
-    if proc.returncode != 0:
-        logger.error("Worker stderr: %s", proc.stderr)
-        raise HTTPException(status_code=500, detail=f"Worker failed: {proc.stderr or proc.stdout}")
-    if not result_ct.exists():
-        raise HTTPException(status_code=500, detail="Worker did not produce result.ct")
-    return result_ct
+        # Legacy batch: session-level files
+        if op in ("total_payroll", "avg_salary", "bonus_pool"):
+            src = blob_dir / "salary.ct"
+            if not src.exists():
+                raise HTTPException(status_code=400, detail="Session data missing; upload ciphertexts or add employees first")
+            shutil.copy2(src, job_dir / "salary.ct")
+        else:
+            src = blob_dir / "hours.ct"
+            if not src.exists():
+                raise HTTPException(status_code=400, detail="Session data missing; upload ciphertexts or add employees first")
+            shutil.copy2(src, job_dir / "hours.ct")
+        n = s.get("count") or 0
+    return n
 
 
 # ---------------------------------------------------------------------------
@@ -149,6 +217,7 @@ def session_keys(req: SessionKeysRequest):
         "hours_ct_path": None,
         "bonus_points_ct_path": None,
         "count": 0,
+        "employees": {},
         "created_at": now,
         "updated_at": now,
     }
@@ -172,29 +241,126 @@ def session_data(req: SessionDataRequest):
     s["hours_ct_path"] = str(blob_dir / "hours.ct")
     s["bonus_points_ct_path"] = str(blob_dir / "bonus_points.ct")
     s["count"] = req.count
+    s.setdefault("employees", {})
     s["updated_at"] = now
     db.upsert_session(req.session_id, s)
     return {"ok": True}
+
+
+# ---------- CRUD: HR employees (encrypted per employee) ----------
+
+def _write_single_ct(path: Path, ct_b64: str) -> None:
+    """Write one ciphertext to file in format [count=1][len][bytes]."""
+    raw = base64.b64decode(ct_b64)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    with open(path, "wb") as f:
+        f.write(struct.pack("<I", 1))
+        f.write(struct.pack("<I", len(raw)))
+        f.write(raw)
+
+
+@app.post("/v1/session/{session_id}/employees")
+def create_or_update_employee(session_id: str, req: EmployeeDataRequest):
+    """Create or replace one employee's encrypted HR data (salary, hours, bonus_points)."""
+    _validate_session_id(session_id)
+    _validate_employee_id(req.employee_id)
+    s = get_session(session_id)
+    blob_dir = Path(s["blob_dir"])
+    if not (blob_dir / "params.seal").exists():
+        raise HTTPException(status_code=400, detail="Session keys missing; upload keys first")
+    emp_dir = blob_dir / "employees" / req.employee_id
+    emp_dir.mkdir(parents=True, exist_ok=True)
+    _write_single_ct(emp_dir / "salary.ct", req.salary_ct_b64)
+    _write_single_ct(emp_dir / "hours.ct", req.hours_ct_b64)
+    _write_single_ct(emp_dir / "bonus_points.ct", req.bonus_points_ct_b64)
+    s.setdefault("employees", {})
+    s["employees"][req.employee_id] = {
+        "salary_ct_path": str(emp_dir / "salary.ct"),
+        "hours_ct_path": str(emp_dir / "hours.ct"),
+        "bonus_points_ct_path": str(emp_dir / "bonus_points.ct"),
+    }
+    s["updated_at"] = time.time()
+    db.upsert_session(session_id, s)
+    return {"ok": True, "employee_id": req.employee_id}
+
+
+@app.get("/v1/session/{session_id}/employees")
+def list_employees(session_id: str):
+    """List employee_ids in this session."""
+    s = get_session(session_id)
+    emp = s.get("employees") or {}
+    return {"employee_ids": list(emp.keys()), "count": len(emp)}
+
+
+@app.get("/v1/session/{session_id}/employees/{employee_id}")
+def get_employee(session_id: str, employee_id: str):
+    """Get one employee's encrypted payload (base64 ciphertexts). Client decrypts with secret key."""
+    _validate_employee_id(employee_id)
+    s = get_session(session_id)
+    emp = (s.get("employees") or {}).get(employee_id)
+    if not emp:
+        raise HTTPException(status_code=404, detail="Employee not found")
+    # Each file is [1][len][ct]; return the single ct as b64
+    def read_one_ct(path_key: str) -> str:
+        p = Path(emp[path_key])
+        if not p.exists():
+            raise HTTPException(status_code=500, detail=f"Missing {path_key}")
+        data = p.read_bytes()
+        if len(data) < 8:
+            raise HTTPException(status_code=500, detail="Invalid ct file")
+        (_, ln) = struct.unpack("<II", data[:8])
+        if 8 + ln > len(data):
+            raise HTTPException(status_code=500, detail="Invalid ct file")
+        return base64.b64encode(data[8 : 8 + ln]).decode("ascii")
+    return {
+        "employee_id": employee_id,
+        "salary_ct_b64": read_one_ct("salary_ct_path"),
+        "hours_ct_b64": read_one_ct("hours_ct_path"),
+        "bonus_points_ct_b64": read_one_ct("bonus_points_ct_path"),
+    }
+
+
+@app.put("/v1/session/{session_id}/employees/{employee_id}")
+def update_employee(session_id: str, employee_id: str, req: EmployeeDataRequest):
+    """Update employee; employee_id in path must match body."""
+    _validate_employee_id(employee_id)
+    if req.employee_id != employee_id:
+        raise HTTPException(status_code=400, detail="employee_id in path and body must match")
+    return create_or_update_employee(session_id, req)
+
+
+@app.delete("/v1/session/{session_id}/employees/{employee_id}")
+def delete_employee(session_id: str, employee_id: str):
+    """Remove one employee's encrypted data."""
+    _validate_employee_id(employee_id)
+    s = get_session(session_id)
+    emp = s.get("employees") or {}
+    if employee_id not in emp:
+        raise HTTPException(status_code=404, detail="Employee not found")
+    blob_dir = Path(s["blob_dir"])
+    emp_dir = blob_dir / "employees" / employee_id
+    if emp_dir.exists():
+        shutil.rmtree(emp_dir)
+    del s["employees"][employee_id]
+    s["updated_at"] = time.time()
+    db.upsert_session(session_id, s)
+    return {"ok": True, "employee_id": employee_id}
 
 
 def _enqueue_compute(session_id: str, op: str, result_type: str, **extra) -> str:
     job_id = str(uuid.uuid4())
     s = get_session(session_id)
     blob_dir = Path(s["blob_dir"])
-    # Require data artifacts for compute
-    if not (blob_dir / "salary.ct").exists() or not (blob_dir / "hours.ct").exists():
-        raise HTTPException(status_code=400, detail="Session data missing; upload ciphertexts first")
     job_dir = db.job_blob_dir(job_id)
     job_dir = job_dir.resolve()
-    # Copy inputs into job dir so worker can run in job_dir
     for name in ["params.seal", "relin_keys.seal", "public_key.seal"]:
         src = blob_dir / name
         if src.exists():
             shutil.copy2(src, job_dir / name)
-    if op in ("total_payroll", "avg_salary", "bonus_pool"):
-        shutil.copy2(blob_dir / "salary.ct", job_dir / "salary.ct")
-    else:
-        shutil.copy2(blob_dir / "hours.ct", job_dir / "hours.ct")
+    try:
+        count = _prepare_compute_input(s, blob_dir, job_dir, op)
+    except HTTPException:
+        raise
     created_at = time.time()
     db.upsert_job(job_id, {
         "job_id": job_id,
@@ -202,13 +368,13 @@ def _enqueue_compute(session_id: str, op: str, result_type: str, **extra) -> str
         "status": "running",
         "result_path": None,
         "result_type": result_type,
-        "count": s.get("count"),
+        "count": count,
         "created_at": created_at,
         "finished_at": None,
         **{k: v for k, v in extra.items() if k != "worker_extra"},
     })
     try:
-        result_path = run_worker(op, job_dir, extra=list(extra.get("worker_extra", [])))
+        result_path = _run_compute(op, job_dir)
         result_path_str = str(result_path.resolve())
         finished_at = time.time()
         db.upsert_job(job_id, {
@@ -217,7 +383,7 @@ def _enqueue_compute(session_id: str, op: str, result_type: str, **extra) -> str
             "status": "done",
             "result_path": result_path_str,
             "result_type": result_type,
-            "count": s.get("count"),
+            "count": count,
             "created_at": created_at,
             "finished_at": finished_at,
             **{k: v for k, v in extra.items() if k != "worker_extra"},
@@ -246,7 +412,8 @@ def compute_total_payroll(req: ComputeSessionRequest):
 def compute_avg_salary(req: ComputeSessionRequest):
     s = get_session(req.session_id)
     job_id = _enqueue_compute(req.session_id, "avg_salary", "avg_salary")
-    return {"job_id": job_id, "count": s["count"]}
+    count = len(s.get("employees")) if s.get("employees") else s.get("count", 0)
+    return {"job_id": job_id, "count": count}
 
 
 @app.post("/v1/compute/total_hours")
