@@ -34,6 +34,9 @@ OUT_DIR = Path("out")
 DATA_DIR = Path("data")
 DEFAULT_SERVER = "http://127.0.0.1:8000"
 
+# Plain modulus for Batching(poly, 20); used to normalize BFV decoded wraparound (negative -> unsigned).
+PLAIN_MODULUS_BATCHING_20 = 2**20
+
 
 def _need_requests():
     if requests is None:
@@ -66,9 +69,35 @@ def _session_id() -> str:
 
 # ---------- SEAL helpers ----------
 
+def _seal_scheme_bfv():
+    """Return seal BFV scheme type (handles scheme_type.bfv or SchemeType.BFV)."""
+    st = getattr(_SEAL, "scheme_type", None) or getattr(_SEAL, "SchemeType", None)
+    if st is None:
+        raise RuntimeError("seal has no scheme_type or SchemeType")
+    return getattr(st, "bfv", None) or getattr(st, "BFV", None)
+
+
+def _normalize_decoded_value(value: int, plain_modulus: int = PLAIN_MODULUS_BATCHING_20) -> int:
+    """Convert BFV decoded value to unsigned interpretation (fix wraparound negative)."""
+    return value if value >= 0 else value + plain_modulus
+
+
+def _decode_plaintext_to_int(batch, pt, plain_modulus: int = PLAIN_MODULUS_BATCHING_20) -> int:
+    """Decode plaintext to first slot; support decode_int64 or decode; normalize wraparound."""
+    if hasattr(batch, "decode_int64"):
+        vals = batch.decode_int64(pt)
+    else:
+        vals = batch.decode(pt)
+    try:
+        raw = int(vals[0]) if vals is not None and len(vals) else 0
+    except (TypeError, IndexError):
+        raw = int(vals) if vals is not None else 0
+    return _normalize_decoded_value(raw, plain_modulus)
+
+
 def _load_context(out_dir: Path):
     _need_seal()
-    params = _SEAL.EncryptionParameters(_SEAL.scheme_type.bfv)
+    params = _SEAL.EncryptionParameters(_seal_scheme_bfv())
     params.load(str(out_dir / "params.seal"))
     ctx = _SEAL.SEALContext(params)
     err_fn = getattr(ctx, "parameter_error_message", None)
@@ -108,11 +137,13 @@ def cmd_init_context(args):
     """Create params.seal (poly 4096 or 8192)."""
     _need_seal()
     poly = getattr(args, "poly", 8192)
-    # SEAL-Python: scheme_type.bfv (lowercase), CoeffModulus.BFVDefault, PlainModulus.Batching
-    parms = _SEAL.EncryptionParameters(_SEAL.scheme_type.bfv)
+    # Compatible with scheme_type.bfv or SchemeType.BFV, CoeffModulus.BFVDefault, PlainModulus.Batching
+    parms = _SEAL.EncryptionParameters(_seal_scheme_bfv())
     parms.set_poly_modulus_degree(poly)
-    parms.set_coeff_modulus(_SEAL.CoeffModulus.BFVDefault(poly))
-    parms.set_plain_modulus(_SEAL.PlainModulus.Batching(poly, 20))
+    coeff_fn = getattr(_SEAL.CoeffModulus, "BFVDefault", None) or getattr(_SEAL.CoeffModulus, "bfv_default", None)
+    parms.set_coeff_modulus(coeff_fn(poly))
+    plain_fn = getattr(_SEAL.PlainModulus, "Batching", None) or getattr(_SEAL.PlainModulus, "batching", None)
+    parms.set_plain_modulus(plain_fn(poly, 20))
     OUT_DIR.mkdir(parents=True, exist_ok=True)
     parms.save(str(OUT_DIR / "params.seal"))
     print(f"Written {OUT_DIR}/params.seal (poly={poly})")
@@ -358,8 +389,7 @@ def cmd_fetch_decrypt(args):
         ct.load(ctx, t.name)
     # Decryptor.decrypt(ciphertext) returns Plaintext
     pt = dec.decrypt(ct)
-    vals = batch.decode_int64(pt)
-    value = int(vals[0]) if vals else 0
+    value = _decode_plaintext_to_int(batch, pt)
     result_type = data.get("result_type", "")
     count = data.get("count")
     bonus_bps = data.get("bonus_rate_bps")
@@ -493,7 +523,7 @@ def cmd_employee_list(args):
 
 
 def _decrypt_one_ct_b64(ctx, sk, ct_b64: str) -> int:
-    """Decrypt a single-value ciphertext (base64); return the int (slot 0)."""
+    """Decrypt a single-value ciphertext (base64); return the int (slot 0), normalized for wraparound."""
     dec = _SEAL.Decryptor(ctx, sk)
     batch = _SEAL.BatchEncoder(ctx)
     ct = _SEAL.Ciphertext()
@@ -502,8 +532,7 @@ def _decrypt_one_ct_b64(ctx, sk, ct_b64: str) -> int:
         Path(t.name).write_bytes(raw)
         ct.load(ctx, t.name)
     pt = dec.decrypt(ct)
-    vals = batch.decode_int64(pt)
-    return int(vals[0]) if vals else 0
+    return _decode_plaintext_to_int(batch, pt)
 
 
 def cmd_employee_get(args):

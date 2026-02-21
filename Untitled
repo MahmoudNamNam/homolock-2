@@ -1,2 +1,0 @@
-chmod 400 homolock-key.pem
-ssh -i homolock-key.pem ubuntu@54.90.196.114

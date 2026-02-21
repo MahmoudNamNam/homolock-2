@@ -490,13 +490,24 @@ def run_all(req: Optional[RunRequest] = Body(None)):
     _validate_session_id(session_id)
     try:
         blob_dir = db.session_blob_dir(session_id)
+        existing = db.get_session(session_id)
+        existing_employees = existing.get("employees", {}) if existing else {}
+        preserve_session = len(existing_employees) == count and existing_employees
+        if preserve_session:
+            # Do not overwrite keys or batch: per-employee ciphertexts (e.g. after PATCH adjust) were encrypted with current session keys. Re-run compute only.
+            job_ids = {
+                "total_payroll": _enqueue_compute(session_id, "total_payroll", "total_payroll"),
+                "avg_salary": _enqueue_compute(session_id, "avg_salary", "avg_salary"),
+                "total_hours": _enqueue_compute(session_id, "total_hours", "total_hours"),
+                "bonus_pool": _enqueue_compute(session_id, "bonus_pool", "bonus_pool", bonus_rate_bps=bonus_rate_bps),
+            }
+            return {"session_id": session_id, "job_ids": job_ids}
         (blob_dir / "params.seal").write_bytes(_b64decode_safe(params_b64, "params_b64"))
         (blob_dir / "public_key.seal").write_bytes(_b64decode_safe(public_key_b64, "public_key_b64"))
         (blob_dir / "relin_keys.seal").write_bytes(_b64decode_safe(relin_keys_b64, "relin_keys_b64"))
         if galois_keys_b64:
             (blob_dir / "galois_keys.seal").write_bytes(_b64decode_safe(galois_keys_b64, "galois_keys_b64"))
         now = time.time()
-        existing = db.get_session(session_id)
         session_doc = {
             "session_id": session_id,
             "blob_dir": _blob_dir_str(blob_dir),
@@ -507,7 +518,7 @@ def run_all(req: Optional[RunRequest] = Body(None)):
             "hours_ct_path": None,
             "bonus_points_ct_path": None,
             "count": count,
-            "employees": existing.get("employees", {}) if existing else {},
+            "employees": existing_employees,
             "created_at": existing.get("created_at", now) if existing else now,
             "updated_at": now,
         }
@@ -520,14 +531,13 @@ def run_all(req: Optional[RunRequest] = Body(None)):
         session_doc["bonus_points_ct_path"] = str(blob_dir / "bonus_points.ct")
         session_doc["updated_at"] = time.time()
         db.upsert_session(session_id, session_doc)
+        _create_employees_from_batch_if_data(session_id)
         job_ids = {
             "total_payroll": _enqueue_compute(session_id, "total_payroll", "total_payroll"),
             "avg_salary": _enqueue_compute(session_id, "avg_salary", "avg_salary"),
             "total_hours": _enqueue_compute(session_id, "total_hours", "total_hours"),
             "bonus_pool": _enqueue_compute(session_id, "bonus_pool", "bonus_pool", bonus_rate_bps=bonus_rate_bps),
         }
-        # Auto-create per-employee entries from data/employees.json or employees.csv so GET .../employees returns them
-        _create_employees_from_batch_if_data(session_id)
         return {"session_id": session_id, "job_ids": job_ids}
     except HTTPException:
         raise

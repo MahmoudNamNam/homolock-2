@@ -398,6 +398,7 @@ Replace `<EC2_PUBLIC_IP>` with your instance’s public IPv4. For HTTPS and a do
 ## Limitations
 
 - **BFV**: Integer-only; no real-number division on ciphertext.
+- **Decoded results**: Large sums can wrap in the plaintext space; the client and decrypt scripts normalize negative decoded values using the plain modulus (Batching bit size 20) so aggregates display as intended.
 - **PySEAL required**: Server and client need the `seal` package for HE.
 - Storage is file-based; no auth.
 

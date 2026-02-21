@@ -29,9 +29,25 @@ except ImportError as e:
 SCRIPT_DIR = Path(__file__).resolve().parent
 STATIC_DIR = SCRIPT_DIR.parent / "static"
 
+# Plain modulus for Batching(poly, 20); normalizes BFV decoded wraparound (negative -> unsigned).
+PLAIN_MODULUS_BATCHING_20 = 2**20
+
+
+def _normalize_decoded_value(value: int, plain_modulus: int = PLAIN_MODULUS_BATCHING_20) -> int:
+    """Convert BFV decoded value to unsigned interpretation (fix wraparound negative)."""
+    return value if value >= 0 else value + plain_modulus
+
+
+def _seal_scheme_bfv():
+    st = getattr(seal, "scheme_type", None) or getattr(seal, "SchemeType", None)
+    if st is None:
+        raise RuntimeError("seal has no scheme_type or SchemeType")
+    return getattr(st, "bfv", None) or getattr(st, "BFV", None)
+
 
 def load_context_and_key():
-    params = seal.EncryptionParameters(seal.scheme_type.bfv)
+    scheme = _seal_scheme_bfv()
+    params = seal.EncryptionParameters(scheme)
     params.load(str(STATIC_DIR / "params.seal"))
     ctx = seal.SEALContext(params)
     sk = seal.SecretKey()
@@ -48,8 +64,16 @@ def decrypt_result(ctx, sk, ct_b64: str) -> int:
         Path(t.name).write_bytes(raw)
         ct.load(ctx, t.name)
     pt = dec.decrypt(ct)
-    vals = batch.decode_int64(pt)
-    return int(vals[0]) if vals else 0
+    # PySEAL API varies: decode_int64 or decode
+    if hasattr(batch, "decode_int64"):
+        vals = batch.decode_int64(pt)
+    else:
+        vals = batch.decode(pt)
+    try:
+        raw = int(vals[0]) if vals is not None and len(vals) else 0
+    except (TypeError, IndexError):
+        raw = int(vals) if vals is not None else 0
+    return _normalize_decoded_value(raw)
 
 
 def main():

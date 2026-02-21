@@ -2,6 +2,9 @@
  * HomoLock-HR C++ Worker
  * Runs on the server; performs BFV homomorphic sum on ciphertexts.
  * Does NOT load or use the secret key — only params, relin keys, and input ciphertexts.
+ *
+ * NOTE: The FastAPI server currently uses the Python HE engine (app/he_engine.py) only.
+ * This C++ binary is an optional/standalone implementation and is not invoked by the server.
  */
 
 #include <seal/seal.h>
